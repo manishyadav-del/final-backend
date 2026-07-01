@@ -25,15 +25,30 @@ export async function GET(req) {
       select: { 
         websiteSettings: true,
         ctaConfig: true,
-        compliance: true
+        compliance: true,
+        analytics: true,
+        securityControls: true,
+        emailSettings: true
       }
     });
+
+    // Expose only public recaptcha key, do not leak the secret key
+    const securityControls = settings?.securityControls || {};
+    const publicSecurityControls = {
+      recaptchaSiteKey: securityControls.recaptchaSiteKey || null
+    };
+
+    const emailSettings = settings?.emailSettings || {};
+    const oneSignalAppId = emailSettings.oneSignalAppId || null;
 
     return NextResponse.json(apiSuccess({ 
       isActive: site.isActive,
       websiteSettings: settings?.websiteSettings || null,
       ctaConfig: settings?.ctaConfig || null,
-      compliance: settings?.compliance || null
+      compliance: settings?.compliance || null,
+      analytics: settings?.analytics || null,
+      securityControls: publicSecurityControls,
+      oneSignalAppId
     }));
   } catch (err) {
     return NextResponse.json({ error: "Internal Server Error", message: err.message }, { status: 500 });

@@ -165,13 +165,14 @@ export class CMSClient {
   }
 
   // --- Forms & Leads ---
-  async submitContactForm({ name, email, phone, message }) {
+  async submitContactForm({ name, email, phone, message, recaptchaToken }) {
     return this._request("/api/forms/submit", "POST", {
       siteId: this.siteId,
       name,
       email,
       phone,
       message,
+      recaptchaToken,
     });
   }
 
