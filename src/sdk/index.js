@@ -175,6 +175,16 @@ export class CMSClient {
     });
   }
 
+  // --- Marketing CRM & Newsletters ---
+  async subscribeToNewsletter({ email, name = null, metadata = null, listIds = [] }) {
+    return this._request("/api/newsletter/subscribe", "POST", {
+      email,
+      name,
+      metadata,
+      listIds,
+    });
+  }
+
   // --- Visitor Tracker ---
   async pingVisitor({
     visitorId,

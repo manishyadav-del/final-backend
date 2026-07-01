@@ -61,6 +61,14 @@ export class CMSClient {
     message: string;
   }): Promise<any>;
 
+  // --- Marketing CRM & Newsletters ---
+  subscribeToNewsletter(data: {
+    email: string;
+    name?: string | null;
+    metadata?: any | null;
+    listIds?: string[];
+  }): Promise<any>;
+
   // --- Visitor Tracker ---
   pingVisitor(data: {
     visitorId: string;
