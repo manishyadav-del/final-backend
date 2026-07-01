@@ -1,0 +1,27 @@
+import { NextResponse } from "next/server";
+import { campaignService } from "@/services/campaign.service";
+import { getSiteId } from "@/lib/siteGuard";
+import { handleApiError, apiSuccess } from "@/core/errors";
+
+export async function PUT(req, { params }) {
+  try {
+    const siteId = getSiteId(req);
+    const id = params.id;
+    const body = await req.json();
+    const template = await campaignService.updateTemplate(siteId, id, body);
+    return NextResponse.json(apiSuccess({ template }));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+export async function DELETE(req, { params }) {
+  try {
+    const siteId = getSiteId(req);
+    const id = params.id;
+    await campaignService.deleteTemplate(siteId, id);
+    return NextResponse.json(apiSuccess({ success: true }));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
