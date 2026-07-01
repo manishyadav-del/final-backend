@@ -219,6 +219,15 @@ export class CMSClient {
     return this._request("/api/compliance/config");
   }
 
+  // --- Ad Management ---
+  async getAds(zoneSlug) {
+    return this._request(`/api/ads/serve?zone=${encodeURIComponent(zoneSlug)}`);
+  }
+
+  async trackAdEvent(adId, type) {
+    return this._request("/api/ads/track", "POST", { adId, type });
+  }
+
   // --- SEO Metadata ---
   async getSeoMetadata(pageSlug) {
     return this._request(`/api/seo/${encodeURIComponent(pageSlug)}`);
