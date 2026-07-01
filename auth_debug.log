@@ -246,3 +246,11 @@
 [2026-07-01T08:22:49.465Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-01T08:22:49Z","hostname":"testkey.google.com"}
 [2026-07-01T08:22:49.466Z] [Auth] Authenticating against authService for: uday@gmail.com
 [2026-07-01T08:22:49.710Z] [Auth] Authentication successful for: uday@gmail.com. User ID: cmr1sw5d80002uqxg7lp9qqu7
+[2026-07-01T09:01:35.848Z] [Auth] Attempt started. Email: admin@example.com
+[2026-07-01T09:01:35.850Z] [Auth] Request Host: localhost:3000
+[2026-07-01T09:01:35.850Z] [Auth] Detected local, IP, or Ngrok host. Swapping secretKey to Google test key.
+[2026-07-01T09:01:35.851Z] [Auth] Token received (length: 2169): 0cAFcWeA5xeCIBjFRFooa0coaeNNhH...
+[2026-07-01T09:01:35.852Z] [Auth] Sending request to google siteverify (x-www-form-urlencoded POST body)...
+[2026-07-01T09:01:36.033Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-01T09:01:35Z","hostname":"testkey.google.com"}
+[2026-07-01T09:01:36.061Z] [Auth] Authenticating against authService for: admin@example.com
+[2026-07-01T09:01:37.064Z] [Auth] Authentication successful for: admin@example.com. User ID: cmr1su0o00001uq7w502rsmtl
