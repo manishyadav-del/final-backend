@@ -36,12 +36,20 @@
 
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+// fs and path dynamic loader helper to support Edge/Browser runtime imports
+function getFsAndPath() {
+  const fsName = "fs";
+  const pathName = "path";
+  return {
+    fs: require(fsName),
+    path: require(pathName),
+  };
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function getAppRouterPath(cwd) {
+  const { fs, path } = getFsAndPath();
   const srcApp = path.join(cwd, "src", "app");
   const rootApp = path.join(cwd, "app");
   if (fs.existsSync(srcApp)) return { absolute: srcApp, relative: "src/app" };
@@ -50,6 +58,7 @@ function getAppRouterPath(cwd) {
 }
 
 function findPages(dir, baseAbsolute, routesList = []) {
+  const { fs, path } = getFsAndPath();
   const files = fs.readdirSync(dir);
   files.forEach((file) => {
     const fullPath = path.join(dir, file);

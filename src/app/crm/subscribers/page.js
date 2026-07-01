@@ -15,12 +15,17 @@ export default function SubscribersPage() {
   const [csvFile, setCsvFile] = useState(null);
   const [selectedListId, setSelectedListId] = useState("");
 
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  const [siteId, setSiteId] = useState("demo");
+
+  useEffect(() => {
+    const active = localStorage.getItem("x-site-id") || "demo";
+    setSiteId(active);
+  }, []);
 
   useEffect(() => {
     fetchSubscribers();
     fetchLists();
-  }, [search, statusFilter]);
+  }, [siteId, search, statusFilter]);
 
   const fetchSubscribers = async () => {
     setLoading(true);
