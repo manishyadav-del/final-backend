@@ -6,12 +6,16 @@ import { Shield, Fingerprint, Lock, ShieldCheck } from "lucide-react";
 export default function ConsentPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  const [siteId, setSiteId] = useState("");
 
   useEffect(() => {
-    fetchLogs();
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
   }, []);
+
+  useEffect(() => {
+    if (siteId) fetchLogs();
+  }, [siteId]);
 
   const fetchLogs = async () => {
     setLoading(true);

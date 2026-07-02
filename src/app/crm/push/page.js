@@ -17,9 +17,19 @@ export default function PushPage() {
   const [oneSignalAppId, setOneSignalAppId] = useState("");
   const [oneSignalRestKey, setOneSignalRestKey] = useState("");
   const [configSaving, setConfigSaving] = useState(false);
+  const [siteId, setSiteId] = useState("");
 
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  useEffect(() => {
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
+  }, []);
 
+  useEffect(() => {
+    if (siteId) {
+      fetchNotifications();
+      fetchOneSignalConfig();
+    }
+  }, [siteId]);
 
   async function fetchOneSignalConfig() {
     try {

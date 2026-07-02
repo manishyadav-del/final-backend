@@ -17,14 +17,21 @@ export default function CampaignsPage() {
   });
   const [testEmail, setTestEmail] = useState("");
   const [activeTestId, setActiveTestId] = useState(null);
-
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  const [siteId, setSiteId] = useState("");
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    fetchCampaigns();
-    fetchLists();
-    fetchTemplates();
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
   }, []);
+
+  useEffect(() => {
+    if (siteId) {
+      fetchCampaigns();
+      fetchLists();
+      fetchTemplates();
+    }
+  }, [siteId]);
 
   const fetchCampaigns = async () => {
     setLoading(true);
@@ -72,7 +79,8 @@ export default function CampaignsPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!newCampaign.listId) return alert("Please select a target subscriber list");
+    setSaveError(null);
+    if (!siteId) return setSaveError("Site ID not loaded yet, please wait.");
 
     try {
       const res = await fetch("/api/crm/campaigns", {
@@ -88,9 +96,12 @@ export default function CampaignsPage() {
         setNewCampaign({ name: "", subject: "", body: "", listId: "" });
         setShowAddForm(false);
         fetchCampaigns();
+      } else {
+        setSaveError(data.error || "Failed to save campaign.");
       }
     } catch (err) {
       console.error(err);
+      setSaveError("Network error: " + err.message);
     }
   };
 
@@ -203,17 +214,23 @@ export default function CampaignsPage() {
 
           <div className="grid grid-cols-3 gap-3 items-center">
             <div className="col-span-2">
-              <select
-                required
-                value={newCampaign.listId}
-                onChange={(e) => setNewCampaign({ ...newCampaign, listId: e.target.value })}
-                className="p-2 border rounded text-xs dark:bg-slate-900 w-full"
-              >
-                <option value="">Select Target Subscriber List...</option>
-                {lists.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} ({l._count?.subscribers || 0} sub)</option>
-                ))}
-              </select>
+              {lists.length === 0 ? (
+                <div className="p-2 border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 rounded text-xs text-amber-700 dark:text-amber-400">
+                  ⚠️ No subscriber lists yet.{" "}
+                  <a href="/crm/lists" className="underline font-semibold">Create a list first</a>{" "}to target a campaign. You can still save as a draft.
+                </div>
+              ) : (
+                <select
+                  value={newCampaign.listId}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, listId: e.target.value })}
+                  className="p-2 border rounded text-xs dark:bg-slate-900 w-full"
+                >
+                  <option value="">Select Target Subscriber List (optional for draft)...</option>
+                  {lists.map(l => (
+                    <option key={l.id} value={l.id}>{l.name} ({l._count?.subscribers || 0} subscribers)</option>
+                  ))}
+                </select>
+              )}
             </div>
             {templates.length > 0 && (
               <div>
@@ -232,7 +249,7 @@ export default function CampaignsPage() {
           </div>
 
           <textarea
-            placeholder="Email Body (supports basic HTML)"
+            placeholder="Email Body (supports HTML)"
             rows={8}
             required
             value={newCampaign.body}
@@ -240,9 +257,19 @@ export default function CampaignsPage() {
             className="p-2 border rounded text-xs dark:bg-slate-900 w-full font-mono"
           />
 
-          <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded text-xs font-semibold">
-            Save Draft Campaign
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition">
+              Save Draft Campaign
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowAddForm(false); setSaveError(null); }}
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            {saveError && <p className="text-red-500 text-xs font-semibold">{saveError}</p>}
+          </div>
         </form>
       )}
 

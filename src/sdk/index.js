@@ -226,12 +226,14 @@ export class CMSClient {
   }
 
   // --- Compliance Consent ---
-  async recordConsent({ visitorId, consentType, accepted }) {
-    return this._request("/api/compliance/consent", "POST", {
+  async recordConsent({ visitorId, accepted, analytics = false, marketing = false, ip = null }) {
+    return this._request("/api/visitors/consent", "POST", {
       siteId: this.siteId,
       visitorId,
-      consentType,
       accepted,
+      analytics,
+      marketing,
+      ip,
     });
   }
 

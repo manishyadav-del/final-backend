@@ -7,12 +7,16 @@ export default function CommentsPage() {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
-
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  const [siteId, setSiteId] = useState("");
 
   useEffect(() => {
-    fetchComments();
-  }, [statusFilter]);
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
+  }, []);
+
+  useEffect(() => {
+    if (siteId) fetchComments();
+  }, [statusFilter, siteId]);
 
   const fetchComments = async () => {
     setLoading(true);

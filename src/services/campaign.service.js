@@ -24,21 +24,20 @@ export const campaignService = {
 
   async updateTemplate(siteId, id, data) {
     const { name, subject, htmlContent, designJson } = data;
+    // Verify ownership before updating
+    const existing = await prisma.emailTemplate.findFirst({ where: { id, siteId } });
+    if (!existing) throw new Error("Template not found");
     return prisma.emailTemplate.update({
-      where: { id, siteId },
-      data: {
-        name,
-        subject,
-        htmlContent,
-        designJson,
-      }
+      where: { id },
+      data: { name, subject, htmlContent, designJson }
     });
   },
 
   async deleteTemplate(siteId, id) {
-    return prisma.emailTemplate.delete({
-      where: { id, siteId }
-    });
+    // Verify ownership before deleting
+    const existing = await prisma.emailTemplate.findFirst({ where: { id, siteId } });
+    if (!existing) throw new Error("Template not found");
+    return prisma.emailTemplate.delete({ where: { id } });
   },
 
   async getCampaigns(siteId) {
@@ -61,7 +60,8 @@ export const campaignService = {
         name,
         subject,
         body,
-        listId,
+        // Allow null listId for draft campaigns not yet assigned to a list
+        listId: listId || null,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         status: scheduledAt ? "scheduled" : "draft",
       }

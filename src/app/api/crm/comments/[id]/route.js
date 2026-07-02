@@ -6,7 +6,8 @@ import { handleApiError, apiSuccess } from "@/core/errors";
 export async function PUT(req, { params }) {
   try {
     const siteId = getSiteId(req);
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const body = await req.json();
     const { status } = body;
     const comment = await commentService.updateCommentStatus(siteId, id, status);
@@ -19,7 +20,8 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     const siteId = getSiteId(req);
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     await commentService.deleteComment(siteId, id);
     return NextResponse.json(apiSuccess({ success: true }));
   } catch (err) {

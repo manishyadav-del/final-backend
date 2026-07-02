@@ -14,13 +14,19 @@ export default function SubscribersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [selectedListId, setSelectedListId] = useState("");
-
-  const siteId = typeof window !== "undefined" ? localStorage.getItem("x-site-id") || "demo" : "demo";
+  const [siteId, setSiteId] = useState("");
 
   useEffect(() => {
-    fetchSubscribers();
-    fetchLists();
-  }, [search, statusFilter]);
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
+  }, []);
+
+  useEffect(() => {
+    if (siteId) {
+      fetchSubscribers();
+      fetchLists();
+    }
+  }, [search, statusFilter, siteId]);
 
   const fetchSubscribers = async () => {
     setLoading(true);
@@ -29,9 +35,9 @@ export default function SubscribersPage() {
         headers: { "x-site-id": siteId }
       });
       const data = await res.json();
-      if (data.success) {
-        setSubscribers(data.data.subscribers || []);
-        setTotal(data.data.total || 0);
+      if (!data.error) {
+        setSubscribers(data.data?.subscribers || []);
+        setTotal(data.data?.total || 0);
       }
     } catch (err) {
       console.error(err);
@@ -45,8 +51,8 @@ export default function SubscribersPage() {
         headers: { "x-site-id": siteId }
       });
       const data = await res.json();
-      if (data.success) {
-        setLists(data.data.lists || []);
+      if (!data.error) {
+        setLists(data.data?.lists || []);
       }
     } catch (err) {
       console.error(err);
@@ -65,7 +71,7 @@ export default function SubscribersPage() {
         body: JSON.stringify(newSub)
       });
       const data = await res.json();
-      if (data.success) {
+      if (!data.error) {
         setNewSub({ name: "", email: "", status: "active", tags: "" });
         setShowAddForm(false);
         fetchSubscribers();

@@ -11,7 +11,7 @@ import { ZodError } from "zod";
  * @param {object} meta — optional metadata (pagination, counts, etc.)
  */
 export function apiSuccess(data, meta = {}) {
-  return { data, meta, error: null };
+  return { success: true, data, meta, error: null };
 }
 
 /**
