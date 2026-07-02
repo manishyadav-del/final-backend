@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { getSiteForUser } from "@/lib/getSiteForUser";
 import StatCard from "@/components/dashboard/StatCard";
+import CreateFirstSiteForm from "@/components/dashboard/CreateFirstSiteForm";
 import {
   Inbox,
   FileText,
@@ -104,12 +105,12 @@ export default async function DashboardPage() {
 
   if (!site) {
     return (
-      <div className="p-6 text-center space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="p-4 bg-yellow-50 text-yellow-800 border border-yellow-250 rounded-xl text-sm max-w-md mx-auto">
-          No active site configuration found. Please seed a site ID in your
-          database.
+      <div className="p-6 space-y-6 w-full max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 text-center">Dashboard</h1>
+        <div className="p-4 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-xl text-sm text-center">
+          No active site configuration found. Please create your first site workspace below.
         </div>
+        <CreateFirstSiteForm />
       </div>
     );
   }
