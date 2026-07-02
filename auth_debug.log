@@ -278,3 +278,27 @@
 [2026-07-01T09:01:36.033Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-01T09:01:35Z","hostname":"testkey.google.com"}
 [2026-07-01T09:01:36.061Z] [Auth] Authenticating against authService for: admin@example.com
 [2026-07-01T09:01:37.064Z] [Auth] Authentication successful for: admin@example.com. User ID: cmr1su0o00001uq7w502rsmtl
+[2026-07-02T04:18:02.815Z] [Auth] Attempt started. Email: admin@example.com
+[2026-07-02T04:18:02.816Z] [Auth] Request Host: localhost:3000
+[2026-07-02T04:18:02.816Z] [Auth] Detected local, IP, or Ngrok host. Swapping secretKey to Google test key.
+[2026-07-02T04:18:02.816Z] [Auth] Token received (length: 2212): 0cAFcWeA7LaKgGBzs6COu6CvW75O3K...
+[2026-07-02T04:18:02.816Z] [Auth] Sending request to google siteverify (x-www-form-urlencoded POST body)...
+[2026-07-02T04:18:02.952Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-02T04:18:02Z","hostname":"testkey.google.com"}
+[2026-07-02T04:18:02.958Z] [Auth] Authenticating against authService for: admin@example.com
+[2026-07-02T04:18:03.365Z] [Auth] Authentication failed with error: Invalid credentials
+[2026-07-02T04:18:11.910Z] [Auth] Attempt started. Email: admin@example.com
+[2026-07-02T04:18:11.911Z] [Auth] Request Host: localhost:3000
+[2026-07-02T04:18:11.912Z] [Auth] Detected local, IP, or Ngrok host. Swapping secretKey to Google test key.
+[2026-07-02T04:18:11.912Z] [Auth] Token received (length: 2169): 0cAFcWeA4MUQzy6o0tuGPlNpHqayiH...
+[2026-07-02T04:18:11.912Z] [Auth] Sending request to google siteverify (x-www-form-urlencoded POST body)...
+[2026-07-02T04:18:12.048Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-02T04:18:11Z","hostname":"testkey.google.com"}
+[2026-07-02T04:18:12.049Z] [Auth] Authenticating against authService for: admin@example.com
+[2026-07-02T04:18:12.342Z] [Auth] Authentication successful for: admin@example.com. User ID: cmr1tur660001uh0kxrxvyam8
+[2026-07-02T04:30:35.957Z] [Auth] Attempt started. Email: admin@example.com
+[2026-07-02T04:30:35.957Z] [Auth] Request Host: 192.168.29.15:3000
+[2026-07-02T04:30:35.957Z] [Auth] Detected local, IP, or Ngrok host. Swapping secretKey to Google test key.
+[2026-07-02T04:30:35.958Z] [Auth] Token received (length: 1657): 0cAFcWeA43iRGxo3Ol4hgYrY3EB6Aj...
+[2026-07-02T04:30:35.958Z] [Auth] Sending request to google siteverify (x-www-form-urlencoded POST body)...
+[2026-07-02T04:30:36.102Z] [Auth] reCAPTCHA verifyJson: {"success":true,"challenge_ts":"2026-07-02T04:30:35Z","hostname":"testkey.google.com"}
+[2026-07-02T04:30:36.107Z] [Auth] Authenticating against authService for: admin@example.com
+[2026-07-02T04:30:36.415Z] [Auth] Authentication successful for: admin@example.com. User ID: cmr1tur660001uh0kxrxvyam8
