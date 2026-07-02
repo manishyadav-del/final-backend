@@ -41,8 +41,8 @@ function LoginAndProjectLanding() {
     const isNgrok = hostname.endsWith(".ngrok.io") ||
       hostname.endsWith(".ngrok-free.dev");
 
-    // Use test key on IPs and ngrok domains, but custom key on localhost
-    const useTestKey = isIpAddress || isNgrok;
+    // Use test key on localhost, IPs, and ngrok domains
+    const useTestKey = isIpAddress || isNgrok || hostname === "localhost" || hostname === "127.0.0.1";
     const activeKey = useTestKey
       ? "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
       : process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;

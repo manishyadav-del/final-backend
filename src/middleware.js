@@ -48,7 +48,7 @@ export async function middleware(request) {
         "Access-Control-Allow-Methods":
           "GET, POST, PUT, PATCH, DELETE, OPTIONS",
         "Access-Control-Allow-Headers":
-          "Content-Type, Authorization, x-site-id, x-integration-key, x-requested-with",
+          "Content-Type, Authorization, x-site-id, x-integration-key, x-requested-with, ngrok-skip-browser-warning",
         "Access-Control-Max-Age": "86400",
       };
       return new NextResponse(null, {
@@ -66,7 +66,7 @@ export async function middleware(request) {
     );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, x-site-id, x-integration-key, x-requested-with",
+      "Content-Type, Authorization, x-site-id, x-integration-key, x-requested-with, ngrok-skip-browser-warning",
     );
     return response;
   }

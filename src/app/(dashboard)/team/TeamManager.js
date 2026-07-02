@@ -104,13 +104,14 @@ export default function TeamManager({ siteId, initialTeam }) {
       }
 
       const result = await res.json();
+      const savedMember = result.data?.teamMember || result.teamMember;
 
       if (isEdit) {
         setTeam((prev) =>
-          prev.map((t) => (t.id === selectedItem.id ? result.teamMember : t)),
+          prev.map((t) => (t && t.id === selectedItem.id ? savedMember : t)),
         );
       } else {
-        setTeam((prev) => [...prev, result.teamMember]);
+        setTeam((prev) => [...prev, savedMember]);
       }
 
       handleModalClose();
@@ -164,6 +165,7 @@ export default function TeamManager({ siteId, initialTeam }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {team.map((item) => {
+            if (!item) return null;
             const social = item.socialLinks || {};
             return (
               <div
