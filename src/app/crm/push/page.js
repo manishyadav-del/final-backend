@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Trash2, Plus, Send, Play, Settings } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function PushPage() {
   const [notifications, setNotifications] = useState([]);
@@ -273,13 +274,12 @@ export default function PushPage() {
                   <td className="p-3 text-slate-500 truncate max-w-[150px]">{item.url || "-"}</td>
                   <td className="p-3 font-semibold text-slate-750">{item.sentCount}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
-                      item.status === "sent"
-                        ? "bg-green-50 text-green-700 border-green-150"
-                        : item.status === "failed"
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${item.status === "sent"
+                      ? "bg-green-50 text-green-700 border-green-150"
+                      : item.status === "failed"
                         ? "bg-red-50 text-red-700 border-red-150"
                         : "bg-slate-50 text-slate-700 border-slate-150"
-                    }`}>
+                      }`}>
                       {item.status}
                     </span>
                   </td>
