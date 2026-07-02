@@ -16,17 +16,12 @@ import {
   RefreshCw,
   Activity,
   Calendar,
-  Image,
-  Code,
-  CheckCircle,
-  XCircle,
-  Plus,
+  Layers,
+  Eye,
   Trash2,
-  Edit2,
   FileSpreadsheet,
   Download,
-  Eye,
-  ArrowRight,
+  Plus,
 } from "lucide-react";
 
 export default function CrmDashboardClient({
@@ -49,16 +44,18 @@ export default function CrmDashboardClient({
 
   // --- TAB 2: Ads States ---
   const [ads, setAds] = useState([]);
+  const [zones, setZones] = useState([]);
   const [adsLoading, setAdsLoading] = useState(false);
   const [isAdFormOpen, setIsAdFormOpen] = useState(false);
-  const [editingAd, setEditingAd] = useState(null);
-  const [adName, setAdName] = useState("");
-  const [adType, setAdType] = useState("BANNER");
-  const [adsenseCode, setAdsenseCode] = useState("");
-  const [adImageUrl, setAdImageUrl] = useState("");
-  const [adTargetUrl, setAdTargetUrl] = useState("");
-  const [adPosition, setAdPosition] = useState("HEADER");
-  const [adActive, setAdActive] = useState(true);
+  const [newAd, setNewAd] = useState({
+    zoneId: "",
+    name: "",
+    type: "banner",
+    code: "",
+    imageUrl: "",
+    targetUrl: "",
+    isActive: true,
+  });
   const [adError, setAdError] = useState(null);
   const [adSuccess, setAdSuccess] = useState(null);
 
@@ -70,17 +67,18 @@ export default function CrmDashboardClient({
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState(null);
 
-  // Fetch Ads for Tab 2
-  const fetchAds = async () => {
+  // Fetch Ads and Zones for Tab 2
+  const fetchAdsAndZones = async () => {
     setAdsLoading(true);
     try {
-      const res = await fetch("/api/admin/ads", {
-        headers: { "x-site-id": siteId },
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setAds(json.data?.ads || []);
-      }
+      const [adsRes, zonesRes] = await Promise.all([
+        fetch("/api/admin/ads", { headers: { "x-site-id": siteId } }),
+        fetch("/api/admin/ads/zones", { headers: { "x-site-id": siteId } }),
+      ]);
+      const adsJson = await adsRes.json();
+      const zonesJson = await zonesRes.json();
+      if (adsRes.ok) setAds(adsJson.data?.ads || []);
+      if (zonesRes.ok) setZones(zonesJson.data?.zones || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -90,7 +88,7 @@ export default function CrmDashboardClient({
 
   useEffect(() => {
     if (activeTab === "ads") {
-      fetchAds();
+      fetchAdsAndZones();
     }
   }, [activeTab]);
 
@@ -142,118 +140,54 @@ export default function CrmDashboardClient({
     refreshOverviewData(val);
   };
 
-  // Ads CRUD Handlers
-  const openCreateAdForm = () => {
-    setEditingAd(null);
-    setAdName("");
-    setAdType("BANNER");
-    setAdsenseCode("");
-    setAdImageUrl("");
-    setAdTargetUrl("");
-    setAdPosition("HEADER");
-    setAdActive(true);
-    setAdError(null);
-    setIsAdFormOpen(true);
-  };
-
-  const openEditAdForm = (ad) => {
-    setEditingAd(ad);
-    setAdName(ad.name);
-    setAdType(ad.type);
-    setAdsenseCode(ad.adsenseCode || "");
-    setAdImageUrl(ad.imageUrl || "");
-    setAdTargetUrl(ad.targetUrl || "");
-    setAdPosition(ad.position);
-    setAdActive(ad.active);
-    setAdError(null);
-    setIsAdFormOpen(true);
-  };
-
-  const handleAdSubmit = async (e) => {
+  const handleCreateAd = async (e) => {
     e.preventDefault();
     setAdError(null);
     setAdSuccess(null);
-
-    const payload = {
-      name: adName,
-      type: adType,
-      adsenseCode: adType === "ADSENSE" ? adsenseCode : null,
-      imageUrl: adType === "BANNER" ? adImageUrl : null,
-      targetUrl: adType === "BANNER" ? adTargetUrl : null,
-      position: adPosition,
-      active: adActive,
-    };
-
     try {
-      let res;
-      if (editingAd) {
-        res = await fetch("/api/admin/ads", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "x-site-id": siteId,
-          },
-          body: JSON.stringify({ id: editingAd.id, ...payload }),
+      const res = await fetch("/api/admin/ads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-site-id": siteId,
+        },
+        body: JSON.stringify(newAd),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdSuccess("Ad unit deployed successfully!");
+        setNewAd({
+          zoneId: "",
+          name: "",
+          type: "banner",
+          code: "",
+          imageUrl: "",
+          targetUrl: "",
+          isActive: true,
         });
+        fetchAdsAndZones();
+        setTimeout(() => {
+          setIsAdFormOpen(false);
+          setAdSuccess(null);
+        }, 1500);
       } else {
-        res = await fetch("/api/admin/ads", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-site-id": siteId,
-          },
-          body: JSON.stringify(payload),
-        });
+        throw new Error(data.error || "Failed to deploy campaign");
       }
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to save advertisement");
-
-      if (editingAd) {
-        setAds(ads.map((a) => (a.id === editingAd.id ? json.data.ad : a)));
-        setAdSuccess("Ad unit updated successfully!");
-      } else {
-        setAds([json.data.ad, ...ads]);
-        setAdSuccess("Ad unit created successfully!");
-      }
-
-      setTimeout(() => {
-        setIsAdFormOpen(false);
-        setAdSuccess(null);
-      }, 1500);
     } catch (err) {
       setAdError(err.message);
     }
   };
 
-  const toggleAdStatus = async (ad) => {
+  const handleDeleteAd = async (id) => {
+    if (!confirm("Are you sure you want to delete this ad?")) return;
     try {
-      const res = await fetch("/api/admin/ads", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-site-id": siteId,
-        },
-        body: JSON.stringify({ id: ad.id, active: !ad.active }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setAds(ads.map((a) => (a.id === ad.id ? json.data.ad : a)));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleAdDelete = async (id) => {
-    if (!confirm("Delete this advertisement?")) return;
-    try {
-      const res = await fetch(`/api/admin/ads?id=${id}`, {
+      const res = await fetch(`/api/admin/ads/${id}`, {
         method: "DELETE",
         headers: { "x-site-id": siteId },
       });
-      if (res.ok) {
-        setAds(ads.filter((a) => a.id !== id));
+      const data = await res.json();
+      if (data.success) {
+        fetchAdsAndZones();
       }
     } catch (err) {
       console.error(err);
@@ -475,7 +409,7 @@ export default function CrmDashboardClient({
               <p className="text-xs text-gray-500">Configure visual banner spots or integrate responsive Google AdSense scripts.</p>
             </div>
             <button
-              onClick={openCreateAdForm}
+              onClick={() => setIsAdFormOpen(true)}
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition"
             >
               <Plus size={14} /> New Ad Campaign
@@ -487,57 +421,57 @@ export default function CrmDashboardClient({
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border">
                 <div className="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-                  <h3 className="font-bold text-gray-900 text-sm">{editingAd ? "Modify Ad unit" : "Register Ad placement"}</h3>
+                  <h3 className="font-bold text-gray-900 text-sm">Deploy Campaign</h3>
                   <button onClick={() => setIsAdFormOpen(false)} className="text-xs text-gray-400 hover:text-gray-600 font-bold">Close</button>
                 </div>
-                <form onSubmit={handleAdSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleCreateAd} className="p-6 space-y-4">
                   {adError && <div className="p-3 bg-red-50 text-red-700 text-xs rounded-lg border">{adError}</div>}
                   {adSuccess && <div className="p-3 bg-green-50 text-green-700 text-xs rounded-lg border">{adSuccess}</div>}
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-gray-400 uppercase">Ad Unit Name</label>
-                    <input type="text" required value={adName} onChange={(e) => setAdName(e.target.value)} className="w-full border rounded-lg p-2 text-xs" />
+                    <input type="text" required value={newAd.name} onChange={(e) => setNewAd({ ...newAd, name: e.target.value })} className="w-full border rounded-lg p-2 text-xs" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Ad Type</label>
-                      <select value={adType} onChange={(e) => setAdType(e.target.value)} className="w-full border rounded-lg p-2 text-xs">
-                        <option value="BANNER">Upload Banner</option>
-                        <option value="ADSENSE">Google AdSense</option>
+                      <select value={newAd.type} onChange={(e) => setNewAd({ ...newAd, type: e.target.value })} className="w-full border rounded-lg p-2 text-xs">
+                        <option value="banner">Upload Banner</option>
+                        <option value="adsense">Google AdSense</option>
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase">Position</label>
-                      <select value={adPosition} onChange={(e) => setAdPosition(e.target.value)} className="w-full border rounded-lg p-2 text-xs">
-                        <option value="HEADER">Header</option>
-                        <option value="SIDEBAR">Sidebar</option>
-                        <option value="FOOTER">Footer</option>
-                        <option value="IN_CONTENT">In-Content</option>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Placement Zone</label>
+                      <select required value={newAd.zoneId} onChange={(e) => setNewAd({ ...newAd, zoneId: e.target.value })} className="w-full border rounded-lg p-2 text-xs">
+                        <option value="">Select Zone</option>
+                        {zones.map((z) => (
+                          <option key={z.id} value={z.id}>{z.name}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
-                  {adType === "BANNER" ? (
+                  {newAd.type === "banner" ? (
                     <>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Image Link</label>
-                        <input type="url" required value={adImageUrl} onChange={(e) => setAdImageUrl(e.target.value)} className="w-full border rounded-lg p-2 text-xs" />
+                        <input type="url" required value={newAd.imageUrl} onChange={(e) => setNewAd({ ...newAd, imageUrl: e.target.value })} className="w-full border rounded-lg p-2 text-xs" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Redirect URL</label>
-                        <input type="url" required value={adTargetUrl} onChange={(e) => setAdTargetUrl(e.target.value)} className="w-full border rounded-lg p-2 text-xs" />
+                        <input type="url" required value={newAd.targetUrl} onChange={(e) => setNewAd({ ...newAd, targetUrl: e.target.value })} className="w-full border rounded-lg p-2 text-xs" />
                       </div>
                     </>
                   ) : (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-gray-400 uppercase">Script Code</label>
-                      <textarea required rows={4} value={adsenseCode} onChange={(e) => setAdsenseCode(e.target.value)} className="w-full border rounded-lg p-2 text-xs font-mono" />
+                      <textarea required rows={4} value={newAd.code} onChange={(e) => setNewAd({ ...newAd, code: e.target.value })} className="w-full border rounded-lg p-2 text-xs font-mono" />
                     </div>
                   )}
 
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" id="adActive" checked={adActive} onChange={(e) => setAdActive(e.target.checked)} className="rounded" />
+                    <input type="checkbox" id="adActive" checked={newAd.isActive} onChange={(e) => setNewAd({ ...newAd, isActive: e.target.checked })} className="rounded" />
                     <label htmlFor="adActive" className="text-xs font-semibold text-gray-700">Display this advertisement immediately</label>
                   </div>
 
@@ -562,8 +496,7 @@ export default function CrmDashboardClient({
                   <tr className="bg-gray-50 border-b text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                     <th className="px-5 py-3">Ad Name</th>
                     <th className="px-5 py-3">Type</th>
-                    <th className="px-5 py-3">Position</th>
-                    <th className="px-5 py-3 text-center">Status</th>
+                    <th className="px-5 py-3">Zone</th>
                     <th className="px-5 py-3 text-center">Impressions</th>
                     <th className="px-5 py-3 text-center">Clicks</th>
                     <th className="px-5 py-3 text-center">CTR</th>
@@ -576,21 +509,15 @@ export default function CrmDashboardClient({
                       <td className="px-5 py-4 font-semibold text-gray-800">{ad.name}</td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                          ad.type === "BANNER" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
+                          ad.type === "banner" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
                         }`}>{ad.type}</span>
                       </td>
-                      <td className="px-5 py-4 font-semibold text-gray-500">{ad.position}</td>
-                      <td className="px-5 py-4 text-center">
-                        <button onClick={() => toggleAdStatus(ad)} className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          ad.active ? "bg-green-50 text-green-700" : "bg-slate-100 text-gray-500"
-                        }`}>{ad.active ? "Active" : "Disabled"}</button>
-                      </td>
-                      <td className="px-5 py-4 text-center">{ad.impressions}</td>
-                      <td className="px-5 py-4 text-center">{ad.clicks}</td>
+                      <td className="px-5 py-4 font-semibold text-gray-500">{ad.zone?.name || "Unassigned"}</td>
+                      <td className="px-5 py-4 text-center">{ad.impressions || 0}</td>
+                      <td className="px-5 py-4 text-center">{ad.clicks || 0}</td>
                       <td className="px-5 py-4 text-center font-bold text-gray-800">{getCTR(ad.impressions, ad.clicks)}</td>
-                      <td className="px-5 py-4 text-right space-x-1">
-                        <button onClick={() => openEditAdForm(ad)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600"><Edit2 size={13} /></button>
-                        <button onClick={() => handleAdDelete(ad.id)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                      <td className="px-5 py-4 text-right">
+                        <button onClick={() => handleDeleteAd(ad.id)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
                       </td>
                     </tr>
                   ))}
@@ -639,7 +566,6 @@ export default function CrmDashboardClient({
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-gray-900 text-xs">Query Results Table</h3>
-                {/* Download button */}
                 <a
                   href={`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(reportResults, null, 2))}`}
                   download={`CRM_Report_${reportType}_${new Date().toISOString().split("T")[0]}.json`}
