@@ -5,5 +5,5 @@ export function getSiteId(req) {
     searchParams?.get("siteId") ||
     searchParams?.get("site_id");
 
-  return siteId || "ahealthplace_website_id_123";
+  return siteId || process.env.NEXT_PUBLIC_SITE_ID || process.env.SITE_ID || "infinium";
 }

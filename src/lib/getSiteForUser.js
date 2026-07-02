@@ -12,8 +12,34 @@ import { cookies } from "next/headers";
 export async function getSiteForUser(user) {
   if (!user) return null;
 
+  try {
+    const cookieStore = await cookies();
+    const selectedSiteId = cookieStore.get("active_site_id")?.value;
+
+    if (selectedSiteId) {
+      const isSuper = user.globalRole === "SUPERADMIN" || user.globalRole === "ADMIN";
+      const membership = isSuper
+        ? true
+        : await prisma.siteUser.findFirst({
+            where: { userId: user.id, siteId: selectedSiteId },
+          });
+
+      if (membership) {
+        const site = await prisma.site.findUnique({
+          where: { id: selectedSiteId },
+        });
+        if (site && !site.deletedAt) {
+          return site;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error reading active_site_id cookie:", e);
+  }
+
+  const fallbackSiteId = process.env.NEXT_PUBLIC_SITE_ID || process.env.SITE_ID || "infinium";
   const site = await prisma.site.findUnique({
-    where: { id: "ahealthplace_website_id_123" },
+    where: { id: fallbackSiteId },
   });
   if (site) return site;
 

@@ -16,22 +16,14 @@ export default async function Layout({ children }) {
   const site = await getSiteForUser(user);
   const siteId = site ? site.id : null;
 
-  // Fetch list of accessible sites for the workspace picker
+  const connectedSiteId = process.env.NEXT_PUBLIC_SITE_ID || process.env.SITE_ID || "infinium";
   let sites = [];
-  const isSuper = user.globalRole === "SUPERADMIN" || user.globalRole === "ADMIN";
-  if (isSuper) {
-    sites = await prisma.site.findMany({
-      where: { deletedAt: null },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true }
-    });
-  } else {
-    const memberships = await prisma.siteUser.findMany({
-      where: { userId: user.id, site: { deletedAt: null, isActive: true } },
-      include: { site: { select: { id: true, name: true } } },
-      orderBy: { site: { name: "asc" } }
-    });
-    sites = memberships.map(m => m.site).filter(Boolean);
+  const connectedSite = await prisma.site.findUnique({
+    where: { id: connectedSiteId, deletedAt: null },
+    select: { id: true, name: true }
+  });
+  if (connectedSite) {
+    sites = [connectedSite];
   }
 
   return (
