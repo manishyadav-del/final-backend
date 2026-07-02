@@ -270,6 +270,15 @@ export class CMSClient {
         : `${cleanDomain}${item.url.startsWith("/") ? "" : "/"}${item.url}`,
     }));
   }
+  // --- Newsletter / Subscriber Registration ---
+  async subscribeNewsletter({ email, name = "", listIds = [], metadata = {} }) {
+    return this._request("/api/newsletter/subscribe", "POST", {
+      email,
+      name,
+      listIds,
+      metadata,
+    });
+  }
 
   // --- Next.js Sync Manifest ---
   async syncRoutes(routes, integrationKey) {
