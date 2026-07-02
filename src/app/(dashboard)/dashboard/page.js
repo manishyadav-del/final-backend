@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { getSiteForUser } from "@/lib/getSiteForUser";
 import StatCard from "@/components/dashboard/StatCard";
+import CreateFirstSiteForm from "@/components/dashboard/CreateFirstSiteForm";
 import {
   Inbox,
   FileText,
@@ -104,12 +105,12 @@ export default async function DashboardPage() {
 
   if (!site) {
     return (
-      <div className="p-6 text-center space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="p-4 bg-yellow-50 text-yellow-800 border border-yellow-250 rounded-xl text-sm max-w-md mx-auto">
-          No active site configuration found. Please seed a site ID in your
-          database.
+      <div className="p-6 space-y-6 w-full max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 text-center">Dashboard</h1>
+        <div className="p-4 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-xl text-sm text-center">
+          No active site configuration found. Please create your first site workspace below.
         </div>
+        <CreateFirstSiteForm />
       </div>
     );
   }
@@ -154,10 +155,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold md:text-3xl ">
           Dashboard
         </h1>
-        <p className="text-gray-500 text-sm mt-0.5">
+        <p className="text-gray-500 text-sm mt-0.5 flex flex-wrap items-center gap-1.5">
           Overview for:{" "}
-          <span className="font-semibold text-gray-800">{site.name}</span> (
-          {site.domain || site.id})
+          <span className="font-semibold text-gray-800">{site.name}</span>{" "}
+          {site.domain ? `(${site.domain})` : ""} | Site ID:{" "}
+          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-indigo-650 dark:text-indigo-400 select-all font-semibold">
+            {site.id}
+          </span>
         </p>
       </div>
 
@@ -293,7 +297,7 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 italic truncate">
-                      "{item.message}"
+                      &quot;{item.message}&quot;
                     </p>
                   </div>
                 ))

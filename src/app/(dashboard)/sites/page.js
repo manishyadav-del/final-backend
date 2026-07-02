@@ -25,9 +25,8 @@ export default async function SitesPage() {
     redirect("/dashboard");
   }
 
-  const connectedSiteId = process.env.NEXT_PUBLIC_SITE_ID || process.env.SITE_ID || "infinium";
   const sites = await prisma.site.findMany({
-    where: { id: connectedSiteId, deletedAt: null },
+    where: { deletedAt: null },
     include: {
       _count: {
         select: {
