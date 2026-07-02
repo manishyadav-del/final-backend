@@ -20,6 +20,7 @@ export async function GET(req) {
       ...emailSettings,
       password: emailSettings.password ? "********" : null,
       resendApiKey: emailSettings.resendApiKey ? "********" : null,
+      sendgridApiKey: emailSettings.sendgridApiKey ? "********" : null,
     };
 
     return NextResponse.json(apiSuccess({ emailSettings: sanitized }));
@@ -47,6 +48,7 @@ export async function PUT(req) {
       password,
       formEmail,
       resendApiKey,
+      sendgridApiKey,
       autoReplyTemplate,
       adminAlerts,
     } = body;
@@ -77,6 +79,10 @@ export async function PUT(req) {
         resendApiKey !== undefined && resendApiKey !== "********"
           ? resendApiKey
           : currentEmailSettings.resendApiKey,
+      sendgridApiKey:
+        sendgridApiKey !== undefined && sendgridApiKey !== "********"
+          ? sendgridApiKey
+          : currentEmailSettings.sendgridApiKey,
       autoReplyTemplate:
         autoReplyTemplate !== undefined
           ? autoReplyTemplate
@@ -98,6 +104,7 @@ export async function PUT(req) {
       ...updated.emailSettings,
       password: updated.emailSettings.password ? "********" : null,
       resendApiKey: updated.emailSettings.resendApiKey ? "********" : null,
+      sendgridApiKey: updated.emailSettings.sendgridApiKey ? "********" : null,
     };
 
     return NextResponse.json(apiSuccess({ emailSettings: sanitized }));

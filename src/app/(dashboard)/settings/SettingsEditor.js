@@ -1920,6 +1920,24 @@ export default function SettingsEditor({ siteId, initialSettings }) {
                     placeholder="e.g. partner-1234567"
                   />
                 </div>
+
+                <div>
+                  <label
+                    htmlFor="googleAdSenseId"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Google AdSense Publisher ID
+                  </label>
+                  <input
+                    type="text"
+                    name="googleAdSenseId"
+                    id="googleAdSenseId"
+                    value={analytics.googleAdSenseId || ""}
+                    onChange={handleAnalyticsChange}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
+                    placeholder="e.g. pub-1234567890123456"
+                  />
+                </div>
               </div>
             </div>
           )}

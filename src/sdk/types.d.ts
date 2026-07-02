@@ -59,6 +59,7 @@ export class CMSClient {
     email: string;
     phone?: string;
     message: string;
+    recaptchaToken?: string;
   }): Promise<any>;
 
   // --- Marketing CRM & Newsletters ---

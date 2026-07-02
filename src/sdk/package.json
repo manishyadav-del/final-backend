@@ -1,6 +1,6 @@
 {
   "name": "@yourcompany/global-backend-next",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Next.js integration SDK wrapper for the Global Backend headless CMS platform.",
   "main": "index.js",
   "types": "types.d.ts",

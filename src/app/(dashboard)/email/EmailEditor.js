@@ -75,6 +75,9 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
   const [resendApiKey, setResendApiKey] = useState(
     initialEmailSettings?.resendApiKey || "",
   );
+  const [sendgridApiKey, setSendgridApiKey] = useState(
+    initialEmailSettings?.sendgridApiKey || "",
+  );
 
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(
     initialEmailSettings?.autoReplyTemplate?.enabled !== false,
@@ -117,6 +120,7 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
       password,
       formEmail,
       resendApiKey,
+      sendgridApiKey,
       autoReplyTemplate: {
         enabled: autoReplyEnabled,
         subject: autoReplySubject,
@@ -368,6 +372,17 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
                   >
                     Resend
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setProvider("sendgrid")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold border transition ${
+                      provider === "sendgrid"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    SendGrid
+                  </button>
                 </div>
               </div>
 
@@ -473,6 +488,32 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
                     />
                     <p className="text-[10px] text-gray-400 mt-1">
                       Enter your Resend API key from the Resend dashboard.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* SendGrid Field - shown only when provider is sendgrid */}
+              {provider === "sendgrid" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label
+                      htmlFor="sendgrid_api_key"
+                      className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2"
+                    >
+                      SendGrid API Key
+                    </label>
+                    <input
+                      type="password"
+                      id="sendgrid_api_key"
+                      required={provider === "sendgrid"}
+                      value={sendgridApiKey}
+                      onChange={(e) => setSendgridApiKey(e.target.value)}
+                      placeholder="SG.xxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Enter your SendGrid API key from the SendGrid Settings dashboard.
                     </p>
                   </div>
                 </div>
