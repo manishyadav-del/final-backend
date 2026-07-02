@@ -59,6 +59,32 @@ export default function SeoDashboardClient({ siteId, initialPages, initialPosts 
   const [pages, setPages] = useState(initialPages);
   const [posts, setPosts] = useState(initialPosts);
 
+  // Auditor review states
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewResults, setReviewResults] = useState(null);
+  const [reviewError, setReviewError] = useState(null);
+
+  const runTechnicalReview = async () => {
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/admin/seo/review", {
+        method: "POST",
+        headers: { "x-site-id": siteId },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReviewResults(data.data || data);
+      } else {
+        throw new Error(data.error || "Failed to execute technical auditor scan");
+      }
+    } catch (err) {
+      setReviewError(err.message);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const items = activeTab === "pages" ? pages : posts;
   const filtered = items.filter(
     (item) =>
@@ -188,6 +214,17 @@ export default function SeoDashboardClient({ siteId, initialPages, initialPosts 
             <FileText size={15} />
             Blog Posts ({posts.length})
           </button>
+          <button
+            onClick={() => setActiveTab("review")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition ${
+              activeTab === "review"
+                ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
+            }`}
+          >
+            <Globe size={15} />
+            Technical Review
+          </button>
         </div>
 
         {/* Search */}
@@ -204,61 +241,183 @@ export default function SeoDashboardClient({ siteId, initialPages, initialPosts 
 
       {/* Content list */}
       <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-gray-500 dark:text-slate-400 shadow-sm">
-            No {activeTab} found with the current filter.
-          </div>
-        ) : (
-          filtered.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-center gap-4"
-            >
-              {/* SEO Preview */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-bold text-gray-900 dark:text-slate-100 text-sm truncate">{item.title}</h3>
-                  <SeoStatusBadge item={item} />
-                  <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
-                    item.status === "PUBLISHED"
-                      ? "text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400"
-                      : "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
-                  }`}>
-                    {item.status === "PUBLISHED" ? "Published" : "Draft"}
-                  </span>
-                </div>
-                {jsonPreview(item)}
+        {activeTab === "review" ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center border-b dark:border-slate-750 pb-3">
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-slate-100 text-base">Website Technical Auditor</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Scan speed parameters, broken links, image accessibility compliance, and SEO configurations.</p>
               </div>
-
-              {/* SEO field icons */}
-              <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-400 shrink-0">
-                <span className={`flex items-center gap-1 ${item.seoTitle ? "text-green-500 dark:text-green-400" : ""}`} title="SEO Title">
-                  <Globe size={12} /> Title
-                </span>
-                <span className={`flex items-center gap-1 ${item.seoDescription ? "text-green-500 dark:text-green-400" : ""}`} title="SEO Description">
-                  <Eye size={12} /> Desc
-                </span>
-                <span className={`flex items-center gap-1 ${item.ogImage ? "text-green-500 dark:text-green-400" : ""}`} title="OG Image">
-                  <ImageIcon size={12} /> OG
-                </span>
-                <span className={`flex items-center gap-1 ${item.canonicalUrl ? "text-green-500 dark:text-green-400" : ""}`} title="Canonical URL">
-                  <Link size={12} /> Canonical
-                </span>
-                <span className={`flex items-center gap-1 ${item.jsonLd ? "text-green-500 dark:text-green-400" : ""}`} title="JSON-LD">
-                  <Code size={12} /> JSON-LD
-                </span>
-              </div>
-
-              {/* Edit button */}
               <button
-                onClick={() => handleEditClick(item)}
-                className="flex items-center gap-1.5 shrink-0 px-3.5 py-2 border border-gray-200 dark:border-slate-750 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                onClick={runTechnicalReview}
+                disabled={reviewLoading}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
               >
-                <Edit3 size={13} />
-                Edit SEO
+                <RefreshCw size={14} className={reviewLoading ? "animate-spin" : ""} />
+                {reviewLoading ? "Reviewing..." : "Run Technical Audit"}
               </button>
             </div>
-          ))
+
+            {reviewError && (
+              <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-900/30 rounded-xl text-sm">
+                {reviewError}
+              </div>
+            )}
+
+            {reviewLoading && !reviewResults && (
+              <div className="py-16 text-center space-y-3">
+                <div className="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-blue-600 rounded-full" />
+                <p className="text-sm text-gray-500 font-medium">Scanning client-side page configurations, testing media tags, and verifying slug mapping...</p>
+              </div>
+            )}
+
+            {reviewResults ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-4 border dark:border-slate-750 rounded-xl bg-white dark:bg-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Overall SEO Score</span>
+                    <div className="text-2xl font-extrabold text-blue-600">{reviewResults.overallSeoScore}%</div>
+                  </div>
+                  <div className="p-4 border dark:border-slate-750 rounded-xl bg-white dark:bg-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Performance Speed</span>
+                    <div className="text-2xl font-extrabold text-emerald-600">{reviewResults.performance?.speedScore}%</div>
+                  </div>
+                  <div className="p-4 border dark:border-slate-750 rounded-xl bg-white dark:bg-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Broken Links</span>
+                    <div className="text-2xl font-extrabold text-red-600">{reviewResults.brokenLinks?.count} Detected</div>
+                  </div>
+                  <div className="p-4 border dark:border-slate-750 rounded-xl bg-white dark:bg-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Accessibility Score</span>
+                    <div className="text-2xl font-extrabold text-purple-600">{reviewResults.accessibility?.score}%</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column: Broken Links & Accessibility */}
+                  <div className="space-y-4">
+                    <div className="border dark:border-slate-750 rounded-xl p-5 bg-white dark:bg-slate-800 space-y-3">
+                      <h4 className="font-bold text-sm text-gray-800 dark:text-slate-200 border-b dark:border-slate-750 pb-2">Broken Links Report</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {reviewResults.brokenLinks?.links?.map((link, idx) => (
+                          <div key={idx} className="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/35 rounded-lg text-xs space-y-1">
+                            <div className="font-semibold text-red-700 dark:text-red-400">Broken Link: "{link.targetUrl}"</div>
+                            <div className="text-gray-500 dark:text-slate-400">Found on page: <span className="font-semibold">{link.pageTitle}</span></div>
+                          </div>
+                        ))}
+                        {reviewResults.brokenLinks?.count === 0 && (
+                          <div className="text-center text-xs text-gray-400 italic py-6">All links mapped successfully. No broken paths detected.</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border dark:border-slate-750 rounded-xl p-5 bg-white dark:bg-slate-800 space-y-3">
+                      <h4 className="font-bold text-sm text-gray-800 dark:text-slate-200 border-b dark:border-slate-750 pb-2">Accessibility Checklist</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {reviewResults.accessibility?.issues?.map((issue, idx) => (
+                          <div key={idx} className="p-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/35 rounded-lg text-xs space-y-1">
+                            <div className="font-semibold text-amber-700 dark:text-amber-400">{issue.issue}</div>
+                            <div className="text-[10px] text-gray-500 dark:text-slate-400 font-mono truncate">Asset: {issue.fileName}</div>
+                          </div>
+                        ))}
+                        {reviewResults.accessibility?.issues?.length === 0 && (
+                          <div className="text-center text-xs text-gray-400 italic py-6">All media assets compliant with image alt-text standards.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: SEO Status Check */}
+                  <div className="border dark:border-slate-750 rounded-xl p-5 bg-white dark:bg-slate-800 space-y-3">
+                    <h4 className="font-bold text-sm text-gray-800 dark:text-slate-200 border-b dark:border-slate-750 pb-2">Page-by-Page SEO Audits</h4>
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                      {reviewResults.seoScan?.map((scan) => (
+                        <div key={scan.id} className="p-3.5 border dark:border-slate-750 rounded-lg space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-gray-900 dark:text-slate-100 text-xs">{scan.title}</span>
+                            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${
+                              scan.score >= 80 ? "bg-green-50 text-green-700" : (scan.score >= 50 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700")
+                            }`}>
+                              SEO: {scan.score}%
+                            </span>
+                          </div>
+                          {scan.issues.length > 0 ? (
+                            <ul className="list-disc pl-4 text-[10px] text-gray-500 dark:text-slate-400 space-y-0.5">
+                              {scan.issues.map((issue, idx) => <li key={idx}>{issue}</li>)}
+                            </ul>
+                          ) : (
+                            <div className="text-[10px] text-green-600 font-semibold">Perfect Optimization</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              !reviewLoading && (
+                <div className="py-12 text-center text-xs text-gray-400 italic">
+                  Press "Run Technical Audit" to start the review scanner.
+                </div>
+              )
+            )}
+          </div>
+        ) : (
+          filtered.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center text-gray-500 dark:text-slate-400 shadow-sm">
+              No {activeTab} found with the current filter.
+            </div>
+          ) : (
+            filtered.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-center gap-4"
+              >
+                {/* SEO Preview */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-gray-900 dark:text-slate-100 text-sm truncate">{item.title}</h3>
+                    <SeoStatusBadge item={item} />
+                    <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                      item.status === "PUBLISHED"
+                        ? "text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400"
+                        : "text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400"
+                    }`}>
+                      {item.status === "PUBLISHED" ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                  {jsonPreview(item)}
+                </div>
+
+                {/* SEO field icons */}
+                <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-slate-400 shrink-0">
+                  <span className={`flex items-center gap-1 ${item.seoTitle ? "text-green-500 dark:text-green-400" : ""}`} title="SEO Title">
+                    <Globe size={12} /> Title
+                  </span>
+                  <span className={`flex items-center gap-1 ${item.seoDescription ? "text-green-500 dark:text-green-400" : ""}`} title="SEO Description">
+                    <Eye size={12} /> Desc
+                  </span>
+                  <span className={`flex items-center gap-1 ${item.ogImage ? "text-green-500 dark:text-green-400" : ""}`} title="OG Image">
+                    <ImageIcon size={12} /> OG
+                  </span>
+                  <span className={`flex items-center gap-1 ${item.canonicalUrl ? "text-green-500 dark:text-green-400" : ""}`} title="Canonical URL">
+                    <Link size={12} /> Canonical
+                  </span>
+                  <span className={`flex items-center gap-1 ${item.jsonLd ? "text-green-500 dark:text-green-400" : ""}`} title="JSON-LD">
+                    <Code size={12} /> JSON-LD
+                  </span>
+                </div>
+
+                {/* Edit button */}
+                <button
+                  onClick={() => handleEditClick(item)}
+                  className="flex items-center gap-1.5 shrink-0 px-3.5 py-2 border border-gray-200 dark:border-slate-750 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                >
+                  <Edit3 size={13} />
+                  Edit SEO
+                </button>
+              </div>
+            ))
+          )
         )}
       </div>
 

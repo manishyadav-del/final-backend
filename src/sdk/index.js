@@ -175,6 +175,25 @@ export class CMSClient {
     });
   }
 
+  // --- Newsletter & CRM Subscribers ---
+  async subscribeNewsletter({ email, name, tags = "newsletter", listIds = [] }) {
+    return this._request("/api/newsletter/subscribe", "POST", {
+      siteId: this.siteId,
+      email,
+      name,
+      tags,
+      listIds,
+    });
+  }
+
+  async unsubscribeNewsletter(email) {
+    return this._request("/api/crm/subscribers", "POST", {
+      siteId: this.siteId,
+      email,
+      status: "unsubscribed",
+    });
+  }
+
   // --- Visitor Tracker ---
   async pingVisitor({
     visitorId,
@@ -272,6 +291,18 @@ export class CMSClient {
       return "User-agent: *\nAllow: /";
     }
     return res.text();
+  }
+
+  // --- Advertisement Management ---
+  async getAds() {
+    return this._request("/api/ads");
+  }
+
+  async trackAd(adId, action) {
+    return this._request("/api/ads/track", "POST", {
+      adId,
+      action,
+    });
   }
 }
 

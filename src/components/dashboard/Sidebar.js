@@ -211,6 +211,12 @@ const sections = [
         minRole: "EDITOR",
       },
       {
+        href: "/ads",
+        label: "Advertisements",
+        icon: Megaphone,
+        minRole: "EDITOR",
+      },
+      {
         href: "/seo",
         label: "SEO",
         icon: BarChart2,

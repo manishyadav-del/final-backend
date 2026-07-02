@@ -60,6 +60,32 @@ export default function SecurityConsole({ siteId, user }) {
   const [controlsSuccess, setControlsSuccess] = useState(null);
   const [controlsError, setControlsError] = useState(null);
 
+  // Security audit states
+  const [securityTesting, setSecurityTesting] = useState(false);
+  const [securityResults, setSecurityResults] = useState(null);
+  const [securityError, setSecurityError] = useState(null);
+
+  const runSecurityAudit = async () => {
+    setSecurityTesting(true);
+    setSecurityError(null);
+    try {
+      const res = await fetch("/api/admin/security/audit", {
+        method: "POST",
+        headers: { "x-site-id": siteId },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSecurityResults(data.data || data);
+      } else {
+        throw new Error(data.error || "Failed to execute security audit scanner");
+      }
+    } catch (err) {
+      setSecurityError(err.message);
+    } finally {
+      setSecurityTesting(false);
+    }
+  };
+
   // Fetch Security Controls Config
   const fetchSecurityControls = async () => {
     if (!isAdmin) return;
@@ -392,6 +418,18 @@ export default function SecurityConsole({ siteId, user }) {
             >
               <Sliders size={16} />
               Security Controls
+            </button>
+
+            <button
+              onClick={() => setActiveTab("auditScanner")}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition text-left ${
+                activeTab === "auditScanner"
+                  ? "bg-blue-50 text-blue-600 border border-blue-100"
+                  : "text-gray-600 hover:bg-gray-50 border border-transparent"
+              }`}
+            >
+              <Shield size={16} />
+              OWASP Security Audit
             </button>
           </>
         )}
@@ -995,6 +1033,104 @@ export default function SecurityConsole({ siteId, user }) {
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 6: Security Audit Scanner */}
+        {activeTab === "auditScanner" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Shield size={20} className="text-blue-600" />
+                  OWASP Top 10 Security Scanner
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Run simulated penetration testing and vulnerability checks to audit access controls and input validations.
+                </p>
+              </div>
+
+              <button
+                onClick={runSecurityAudit}
+                disabled={securityTesting}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
+              >
+                <RefreshCw
+                  size={14}
+                  className={securityTesting ? "animate-spin" : ""}
+                />
+                {securityTesting ? "Scanning..." : "Run Security Audit"}
+              </button>
+            </div>
+
+            {securityError && (
+              <div className="flex gap-3 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm">
+                <AlertCircle className="shrink-0" size={18} />
+                <p>{securityError}</p>
+              </div>
+            )}
+
+            {securityTesting && !securityResults && (
+              <div className="py-16 text-center space-y-3">
+                <div className="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-blue-600 rounded-full" />
+                <p className="text-sm text-gray-500 font-medium">Scanning authentication endpoints, parameter validation, and security headers...</p>
+              </div>
+            )}
+
+            {securityResults ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Security Score</span>
+                    <div className="text-2xl font-extrabold text-blue-600 mt-1">{securityResults.securityScore}%</div>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Passed Checks</span>
+                    <div className="text-2xl font-extrabold text-emerald-600 mt-1">{securityResults.passedChecks} / {securityResults.totalChecks}</div>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Vulnerabilities Detected</span>
+                    <div className="text-2xl font-extrabold text-red-600 mt-1">
+                      {securityResults.checks.filter(c => c.status === "FAILED").length}
+                    </div>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Warnings</span>
+                    <div className="text-2xl font-extrabold text-amber-500 mt-1">
+                      {securityResults.checks.filter(c => c.status === "WARNING").length}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-900">Audit Check Checklist</h3>
+                  <div className="space-y-3">
+                    {securityResults.checks?.map((check) => (
+                      <div key={check.id} className="p-4 border rounded-xl flex items-start gap-3 bg-white hover:shadow-sm transition">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 mt-0.5 ${
+                          check.status === "PASSED" ? "bg-green-50 text-green-700" : (check.status === "WARNING" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700")
+                        }`}>
+                          {check.status}
+                        </span>
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-900 text-sm">{check.name}</div>
+                          <p className="text-xs text-gray-500">{check.description}</p>
+                          {check.status !== "PASSED" && (
+                            <p className="text-[11px] text-blue-600 font-semibold mt-1">💡 Recommendation: {check.recommendation}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              !securityTesting && (
+                <div className="py-12 text-center text-xs text-gray-400 italic">
+                  Press "Run Security Audit" to execute simulated vulnerability checks.
+                </div>
+              )
             )}
           </div>
         )}

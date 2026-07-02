@@ -1,18 +1,7 @@
-import Link from "next/link";
 import prisma from "@/lib/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 import { getSiteForUser } from "@/lib/getSiteForUser";
-import StatCard from "@/components/dashboard/StatCard";
-import {
-  Users,
-  Megaphone,
-  Bell,
-  Mail,
-  PlusCircle,
-  FolderOpen,
-  Play,
-  ArrowLeftRight
-} from "lucide-react";
+import CrmDashboardClient from "./CrmDashboardClient";
 
 export default async function CrmDashboardPage() {
   const user = await requireAuth();
@@ -29,163 +18,147 @@ export default async function CrmDashboardPage() {
     );
   }
 
-  // Fetch CRM-scoped stats
-  const totalSubscribers = await prisma.subscriber.count({
-    where: { siteId: site.id }
+  // Pre-load default range = 30 days
+  const range = 30;
+  const dateLimit = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
+
+  const [
+    crmSubscribers,
+    totalLists,
+    totalCampaigns,
+    totalPushes,
+    crmLeads,
+    totalPageViews,
+    recentSubscribers,
+    recentCampaigns,
+  ] = await Promise.all([
+    // 1. Total active subscribers
+    prisma.subscriber.count({ where: { siteId: site.id } }),
+    // 2. Total lists
+    prisma.subscriberList.count({ where: { siteId: site.id } }),
+    // 3. Total campaigns
+    prisma.emailCampaign.count({ where: { siteId: site.id } }),
+    // 4. Total push alerts
+    prisma.pushNotification.count({ where: { siteId: site.id } }),
+    // 5. Total leads in range
+    prisma.lead.count({ where: { siteId: site.id, createdAt: { gte: dateLimit } } }),
+    // 6. Total pageviews in range
+    prisma.visitorLog.count({ where: { siteId: site.id, createdAt: { gte: dateLimit } } }),
+    // 7. Recent 5 subscribers
+    prisma.subscriber.findMany({
+      where: { siteId: site.id },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+    // 8. Recent 5 campaigns
+    prisma.emailCampaign.findMany({
+      where: { siteId: site.id },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  // Pre-calculate traffic trends (daily page views)
+  const logs = await prisma.visitorLog.findMany({
+    where: { siteId: site.id, createdAt: { gte: dateLimit } },
+    select: { createdAt: true, visitorId: true },
+    orderBy: { createdAt: "asc" },
   });
 
-  const totalCampaigns = await prisma.emailCampaign.count({
-    where: { siteId: site.id }
+  const trafficTrends = {};
+  for (let i = range - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const dayStr = d.toISOString().split("T")[0];
+    trafficTrends[dayStr] = { date: dayStr, pageViews: 0, uniqueVisitors: new Set() };
+  }
+
+  logs.forEach((log) => {
+    const dayStr = log.createdAt.toISOString().split("T")[0];
+    if (trafficTrends[dayStr]) {
+      trafficTrends[dayStr].pageViews++;
+      trafficTrends[dayStr].uniqueVisitors.add(log.visitorId);
+    }
   });
 
-  const totalLists = await prisma.subscriberList.count({
-    where: { siteId: site.id }
-  });
+  const trendsList = Object.values(trafficTrends).map((t) => ({
+    date: t.date,
+    pageViews: t.pageViews,
+    uniqueVisitors: t.uniqueVisitors.size,
+  }));
 
-  const totalPushes = await prisma.pushNotification.count({
-    where: { siteId: site.id }
-  });
-
-  const recentSubscribers = await prisma.subscriber.findMany({
-    where: { siteId: site.id },
+  // Campaign performance metrics
+  const emailCampaigns = await prisma.emailCampaign.findMany({
+    where: { siteId: site.id, createdAt: { gte: dateLimit } },
+    include: { logs: true },
+    orderBy: { createdAt: "desc" },
     take: 5,
-    orderBy: { createdAt: "desc" }
   });
 
-  const recentCampaigns = await prisma.emailCampaign.findMany({
-    where: { siteId: site.id },
-    take: 5,
-    orderBy: { createdAt: "desc" }
+  const campaignsPerf = emailCampaigns.map((c) => {
+    const totalSent = c.logs.filter((l) => l.status === "sent").length;
+    const totalOpened = c.logs.filter((l) => l.status === "opened").length;
+    const totalClicked = c.logs.filter((l) => l.status === "clicked").length;
+
+    return {
+      id: c.id,
+      name: c.name,
+      subject: c.subject,
+      status: c.status,
+      sentCount: totalSent,
+      openRate: totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0,
+      clickRate: totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0,
+    };
   });
 
-  const globalRole = user.globalRole || "VIEWER";
+  // Revenue pipeline stats
+  const services = await prisma.service.findMany({
+    where: { siteId: site.id, deletedAt: null },
+    select: { title: true, price: true },
+  });
+
+  const priceMap = {};
+  services.forEach((s) => {
+    const priceNum = parseFloat(String(s.price || "").replace(/[^0-9.]/g, ""));
+    priceMap[s.title.toLowerCase()] = isNaN(priceNum) ? 500 : priceNum;
+  });
+
+  const leads = await prisma.lead.findMany({
+    where: { siteId: site.id, createdAt: { gte: dateLimit } },
+    select: { status: true, serviceInterest: true },
+  });
+
+  let totalPipelineValue = 0;
+  let wonLeads = 0;
+
+  leads.forEach((l) => {
+    const interest = l.serviceInterest ? l.serviceInterest.toLowerCase() : "";
+    const val = priceMap[interest] || 500;
+    totalPipelineValue += val;
+    if (l.status === "won" || l.status === "converted" || l.status === "approved") {
+      wonLeads++;
+    }
+  });
+
+  const statsPayload = {
+    crmSubscribers,
+    totalLists,
+    totalCampaigns,
+    totalPushes,
+    crmLeads,
+    totalPageViews,
+    totalPipelineValue,
+    conversionRate: leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0,
+  };
 
   return (
-    <div className="space-y-8 w-full">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold md:text-3xl">
-          Marketing CRM
-        </h1>
-        <p className="text-gray-500 text-sm mt-0.5">
-          Marketing & Campaigns overview for:{" "}
-          <span className="font-semibold text-gray-800">{site.name}</span>
-        </p>
-      </div>
-
-      {/* Quick Actions Block */}
-      <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-slate-800/40 dark:to-indigo-950/10 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-5 shadow-xs transition-colors duration-200">
-        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">
-          Marketing Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Link
-            href="/crm/campaigns"
-            className="group flex flex-col p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-indigo-300 transition"
-          >
-            <Mail size={16} className="text-indigo-500 mb-2" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">New Campaign</h3>
-            <p className="text-[10px] text-slate-400 mt-1">Draft a new email broadcast</p>
-          </Link>
-          <Link
-            href="/crm/subscribers"
-            className="group flex flex-col p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-indigo-300 transition"
-          >
-            <Users size={16} className="text-indigo-500 mb-2" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">Import Contacts</h3>
-            <p className="text-[10px] text-slate-400 mt-1">Upload CSV subscriber list</p>
-          </Link>
-          <Link
-            href="/crm/templates"
-            className="group flex flex-col p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-indigo-300 transition"
-          >
-            <PlusCircle size={16} className="text-indigo-500 mb-2" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">New Template</h3>
-            <p className="text-[10px] text-slate-400 mt-1">Create newsletter template</p>
-          </Link>
-          <Link
-            href="/crm/push"
-            className="group flex flex-col p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl hover:border-indigo-300 transition"
-          >
-            <Bell size={16} className="text-indigo-500 mb-2" />
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">Send Push</h3>
-            <p className="text-[10px] text-slate-400 mt-1">Broadcast web push alert</p>
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Subscribers" value={totalSubscribers} />
-        <StatCard title="Email Lists" value={totalLists} />
-        <StatCard title="Total Campaigns" value={totalCampaigns} />
-        <StatCard title="Push Alerts" value={totalPushes} />
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        {/* Recent Subscribers */}
-        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-          <h2 className="mb-4 text-base font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-slate-700 pb-2">
-            Recent Subscribers
-          </h2>
-          <div className="space-y-3">
-            {recentSubscribers.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No subscribers registered yet.</p>
-            ) : (
-              recentSubscribers.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-2 text-xs"
-                >
-                  <div>
-                    <span className="font-semibold text-gray-900 dark:text-slate-200">
-                      {item.name || item.email}
-                    </span>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {item.name ? item.email : "No name provided"}
-                    </p>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold border bg-green-50 border-green-200 text-green-700">
-                    {item.status}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Recent Campaigns */}
-        <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:p-6 shadow-sm">
-          <h2 className="mb-4 text-base font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-slate-700 pb-2">
-            Recent Campaigns
-          </h2>
-          <div className="space-y-3">
-            {recentCampaigns.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No campaigns drafted yet.</p>
-            ) : (
-              recentCampaigns.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700 pb-2 text-xs"
-                >
-                  <div>
-                    <span className="font-semibold text-gray-900 dark:text-slate-200">
-                      {item.name}
-                    </span>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      Subject: {item.subject}
-                    </p>
-                  </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold border bg-indigo-50 border-indigo-200 text-indigo-700">
-                    {item.status}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <CrmDashboardClient
+      siteId={site.id}
+      siteName={site.name}
+      initialStats={statsPayload}
+      initialTrends={trendsList}
+      initialCampaignPerformance={campaignsPerf}
+      recentSubscribers={JSON.parse(JSON.stringify(recentSubscribers))}
+      recentCampaigns={JSON.parse(JSON.stringify(recentCampaigns))}
+    />
   );
 }

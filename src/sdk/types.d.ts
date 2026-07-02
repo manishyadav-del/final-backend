@@ -61,6 +61,15 @@ export class CMSClient {
     message: string;
   }): Promise<any>;
 
+  // --- Newsletter & CRM Subscribers ---
+  subscribeNewsletter(data: {
+    email: string;
+    name?: string;
+    tags?: string;
+    listIds?: string[];
+  }): Promise<any>;
+  unsubscribeNewsletter(email: string): Promise<any>;
+
   // --- Visitor Tracker ---
   pingVisitor(data: {
     visitorId: string;
@@ -94,5 +103,9 @@ export class CMSClient {
 
   // --- Robots.txt configuration ---
   getRobotsTxt(): Promise<string>;
+
+  // --- Advertisement Management ---
+  getAds(): Promise<any>;
+  trackAd(adId: string, action: "impression" | "click"): Promise<any>;
 }
 export default CMSClient;

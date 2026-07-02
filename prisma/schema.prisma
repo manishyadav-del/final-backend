@@ -67,6 +67,7 @@ model Site {
   pushNotifications    PushNotification[]
   cookieConsentLogs    CookieConsentLog[]
   comments             Comment[]
+  advertisements       Advertisement[]
 
   @@index([isActive])
 }
@@ -903,3 +904,25 @@ model Comment {
   @@index([postId])
   @@index([siteId])
 }
+
+// ========== ADVERTISEMENTS ==========
+model Advertisement {
+  id          String    @id @default(cuid())
+  siteId      String
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  type        String    // "BANNER" | "ADSENSE"
+  adsenseCode String?   @db.Text
+  imageUrl    String?
+  targetUrl   String?
+  position    String    // "HEADER" | "SIDEBAR" | "FOOTER" | "IN_CONTENT"
+  active      Boolean   @default(true)
+  impressions Int       @default(0)
+  clicks      Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([siteId])
+}
+

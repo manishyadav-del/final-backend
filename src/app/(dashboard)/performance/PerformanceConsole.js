@@ -43,6 +43,32 @@ export default function PerformanceConsole({ siteId, user }) {
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Load test state
+  const [loadTesting, setLoadTesting] = useState(false);
+  const [loadTestResults, setLoadTestResults] = useState(null);
+  const [loadTestError, setLoadTestError] = useState(null);
+
+  const runLoadTest = async () => {
+    setLoadTesting(true);
+    setLoadTestError(null);
+    try {
+      const res = await fetch("/api/admin/performance/load-test", {
+        method: "POST",
+        headers: { "x-site-id": siteId },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLoadTestResults(data.data || data);
+      } else {
+        throw new Error(data.error || "Failed to execute load test benchmark");
+      }
+    } catch (err) {
+      setLoadTestError(err.message);
+    } finally {
+      setLoadTesting(false);
+    }
+  };
+
   const fetchHealth = async () => {
     setHealthLoading(true);
     setHealthError(null);
@@ -253,6 +279,18 @@ export default function PerformanceConsole({ siteId, user }) {
         >
           <ShieldAlert size={16} />
           Exception Error Logs
+        </button>
+
+        <button
+          onClick={() => setActiveTab("loadtest")}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition text-left ${
+            activeTab === "loadtest"
+              ? "bg-blue-50 text-blue-600 border border-blue-100"
+              : "text-gray-600 hover:bg-gray-50 border border-transparent"
+          }`}
+        >
+          <Cpu size={16} />
+          Simultaneous Load Test
         </button>
       </div>
 
@@ -769,6 +807,110 @@ export default function PerformanceConsole({ siteId, user }) {
                   )}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Load Testing */}
+        {activeTab === "loadtest" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Cpu size={20} className="text-blue-600" />
+                  Simultaneous Site & API Load Benchmarking
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Simulate high-concurrency requests to all active client sites and backend APIs to measure latencies and error rates.
+                </p>
+              </div>
+
+              <button
+                onClick={runLoadTest}
+                disabled={loadTesting}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loadTesting ? "animate-spin" : ""}
+                />
+                {loadTesting ? "Testing..." : "Execute Sim Test"}
+              </button>
+            </div>
+
+            {loadTestError && (
+              <div className="flex gap-3 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm">
+                <AlertTriangle className="shrink-0" size={18} />
+                <p>{loadTestError}</p>
+              </div>
+            )}
+
+            {loadTesting && !loadTestResults && (
+              <div className="py-16 text-center space-y-3">
+                <div className="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-blue-600 rounded-full" />
+                <p className="text-sm text-gray-500 font-medium">Spawning concurrent request workers to hit 6 targets...</p>
+              </div>
+            )}
+
+            {loadTestResults ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Concurrency Level</span>
+                    <div className="text-2xl font-extrabold text-gray-900 mt-1">{loadTestResults.concurrency} Workers</div>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Overall Latency</span>
+                    <div className="text-2xl font-extrabold text-gray-900 mt-1">{Math.round(loadTestResults.durationMs || 0)} ms</div>
+                  </div>
+                  <div className="p-4 border rounded-xl bg-gray-50/50">
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Scan Status</span>
+                    <div className="text-2xl font-extrabold text-emerald-600 mt-1">Completed</div>
+                  </div>
+                </div>
+
+                <div className="border rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        <th className="px-5 py-3">Benchmark Target</th>
+                        <th className="px-5 py-3 text-center">Requests</th>
+                        <th className="px-5 py-3 text-center">Success Rate</th>
+                        <th className="px-5 py-3 text-center">Throughput</th>
+                        <th className="px-5 py-3 text-center">Avg Latency</th>
+                        <th className="px-5 py-3 text-right">Latency Range (Min - Max)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y text-xs">
+                      {loadTestResults.results?.map((res, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/50">
+                          <td className="px-5 py-4">
+                            <div className="font-semibold text-gray-900">{res.targetName}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-xs">{res.url}</div>
+                          </td>
+                          <td className="px-5 py-4 text-center font-semibold text-gray-700">{res.requestsSent}</td>
+                          <td className="px-5 py-4 text-center">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              res.failureCount === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                            }`}>
+                              {Math.round((res.successCount / res.requestsSent) * 100)}%
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-center font-bold text-gray-800">{res.throughputRps} req/s</td>
+                          <td className="px-5 py-4 text-center font-semibold text-blue-600">{res.avgLatencyMs} ms</td>
+                          <td className="px-5 py-4 text-right font-mono text-gray-500">{res.minLatencyMs}ms - {res.maxLatencyMs}ms</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              !loadTesting && (
+                <div className="py-12 text-center text-xs text-gray-400 italic">
+                  Press "Execute Sim Test" to start the load testing benchmark.
+                </div>
+              )
             )}
           </div>
         )}

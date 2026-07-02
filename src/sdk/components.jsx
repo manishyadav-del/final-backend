@@ -1950,3 +1950,36 @@ export function RichTextRenderer({ content, className = "" }) {
     />
   );
 }
+
+/**
+ * OneSignalScript Component
+ * Loads and initializes OneSignal on the client website.
+ */
+export function OneSignalScript({ settings }) {
+  if (!settings) return null;
+  const emailSettings = settings.emailSettings || {};
+  const appId = emailSettings.oneSignalAppId;
+  if (!appId) return null;
+
+  return (
+    <Script
+      id="onesignal-init-script"
+      src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+      defer
+      strategy="afterInteractive"
+      onLoad={() => {
+        window.OneSignal = window.OneSignal || [];
+        window.OneSignal.push(function () {
+          window.OneSignal.init({
+            appId: appId,
+            safari_web_id: emailSettings.oneSignalSafariWebId || undefined,
+            notifyButton: {
+              enable: true,
+            },
+          });
+        });
+      }}
+    />
+  );
+}
+
