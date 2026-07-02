@@ -1,6 +1,6 @@
 {
   "name": "@yourcompany/global-backend-next",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Next.js integration SDK wrapper for the Global Backend headless CMS platform.",
   "main": "index.js",
   "types": "types.d.ts",
@@ -14,7 +14,8 @@
   "exports": {
     ".": "./index.js",
     "./components": "./components.jsx",
-    "./sync": "./sync.js"
+    "./sync": "./sync.js",
+    "./instrumentation": "./instrumentation.js"
   },
   "keywords": [
     "cms",

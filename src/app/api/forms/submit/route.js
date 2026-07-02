@@ -283,12 +283,15 @@ export async function POST(req) {
       name === "Newsletter Subscriber";
     if (isNewsletter) {
       try {
+        const cleanEmail = email.toLowerCase().trim();
+        
+        // 1. Legacy Newsletter Table sync
         const existing = await prisma.newsletter.findFirst({
-          where: { siteId, email: email.toLowerCase() },
+          where: { siteId, email: cleanEmail },
         });
         if (!existing) {
           await prisma.newsletter.create({
-            data: { siteId, email: email.toLowerCase(), status: "active" },
+            data: { siteId, email: cleanEmail, status: "active" },
           });
         } else if (existing.status !== "active") {
           await prisma.newsletter.update({
@@ -296,6 +299,16 @@ export async function POST(req) {
             data: { status: "active" },
           });
         }
+
+        // 2. CRM Subscriber Table sync (Marketing CRM)
+        const { subscriberService } = await import("@/services/subscriber.service");
+        await subscriberService.createSubscriber(siteId, {
+          email: cleanEmail,
+          name: name !== "Newsletter Subscriber" ? name : null,
+          status: "active",
+          tags: "contact-form-newsletter",
+          metadata: { source: "contact-form" }
+        });
       } catch (e) {
         console.error("Failed to sync newsletter subscriber:", e);
       }

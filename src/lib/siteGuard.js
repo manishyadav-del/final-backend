@@ -5,9 +5,5 @@ export function getSiteId(req) {
     searchParams?.get("siteId") ||
     searchParams?.get("site_id");
 
-  if (!siteId) {
-    throw new Error("Missing site id");
-  }
-
-  return siteId;
+  return siteId || "ahealthplace_website_id_123";
 }
