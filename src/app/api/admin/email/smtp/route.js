@@ -21,6 +21,7 @@ export async function GET(req) {
       password: emailSettings.password ? "********" : null,
       resendApiKey: emailSettings.resendApiKey ? "********" : null,
       sendgridApiKey: emailSettings.sendgridApiKey ? "********" : null,
+      oneSignalRestKey: emailSettings.oneSignalRestKey ? "********" : null,
     };
 
     return NextResponse.json(apiSuccess({ emailSettings: sanitized }));
@@ -51,6 +52,8 @@ export async function PUT(req) {
       sendgridApiKey,
       autoReplyTemplate,
       adminAlerts,
+      oneSignalAppId,
+      oneSignalRestKey,
     } = body;
 
     const settings = await prisma.globalSettings.findUnique({
@@ -83,6 +86,14 @@ export async function PUT(req) {
         sendgridApiKey !== undefined && sendgridApiKey !== "********"
           ? sendgridApiKey
           : currentEmailSettings.sendgridApiKey,
+      oneSignalAppId:
+        oneSignalAppId !== undefined
+          ? oneSignalAppId
+          : currentEmailSettings.oneSignalAppId,
+      oneSignalRestKey:
+        oneSignalRestKey !== undefined && oneSignalRestKey !== "********"
+          ? oneSignalRestKey
+          : currentEmailSettings.oneSignalRestKey,
       autoReplyTemplate:
         autoReplyTemplate !== undefined
           ? autoReplyTemplate
@@ -105,6 +116,7 @@ export async function PUT(req) {
       password: updated.emailSettings.password ? "********" : null,
       resendApiKey: updated.emailSettings.resendApiKey ? "********" : null,
       sendgridApiKey: updated.emailSettings.sendgridApiKey ? "********" : null,
+      oneSignalRestKey: updated.emailSettings.oneSignalRestKey ? "********" : null,
     };
 
     return NextResponse.json(apiSuccess({ emailSettings: sanitized }));
