@@ -4,7 +4,9 @@ import { apiSuccess } from '@/core/errors';
 
 export async function POST(req) {
   try {
-    const { adId, type } = await req.json();
+    const body = await req.json();
+    const adId = body.adId;
+    const type = body.type || body.action;
     if (!adId || !['impression', 'click'].includes(type)) {
       return NextResponse.json({ error: 'Invalid adId or tracking type' }, { status: 400 });
     }

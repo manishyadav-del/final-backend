@@ -6,11 +6,12 @@ import { handleApiError, apiSuccess } from "@/core/errors";
 export async function GET(req) {
   try {
     const siteId = getSiteId(req);
-    const ads = await prisma.advertisement.findMany({
+    const ads = await prisma.ad.findMany({
       where: {
-        siteId,
-        active: true,
-        deletedAt: null,
+        isActive: true,
+        zone: {
+          siteId,
+        },
       },
       orderBy: {
         createdAt: "desc",
