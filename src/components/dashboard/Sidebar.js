@@ -136,12 +136,6 @@ const crmSections = [
         icon: Mail,
         minRole: "ADMIN",
       },
-      {
-        href: "/dev",
-        label: "Developer Tools",
-        icon: Terminal,
-        minRole: "ADMIN",
-      },
     ],
   },
 ];
