@@ -23,9 +23,9 @@ export async function GET(req) {
       ...(search
         ? {
             OR: [
-              { title: { contains: search, mode: "insensitive" } },
-              { excerpt: { contains: search, mode: "insensitive" } },
-              { contentJson: { contains: search, mode: "insensitive" } },
+              { title: { contains: search } },
+              { excerpt: { contains: search } },
+              { contentJson: { contains: search } },
             ],
           }
         : {}),

@@ -64,7 +64,7 @@ export async function POST(req) {
       where: {
         siteId: auth.siteId,
         OR: [
-          { name: { equals: data.name, mode: "insensitive" } },
+          { name: { equals: data.name } },
           { slug: baseSlug },
         ],
       },
