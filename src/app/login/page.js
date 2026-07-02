@@ -34,8 +34,6 @@ function LoginAndProjectLanding() {
   const [twoFaCode, setTwoFaCode] = useState("");
 
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState(null);
-  const recaptchaContainerRef = useRef(null);
-  const widgetIdRef = useRef(null);
 
   useEffect(() => {
     const hostname = window.location.hostname;
@@ -50,49 +48,30 @@ function LoginAndProjectLanding() {
       : process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
     console.log("[reCAPTCHA Debug] Host:", hostname, "Using test key:", useTestKey, "Site Key:", activeKey);
-    setRecaptchaSiteKey(activeKey);
+    setTimeout(() => {
+      setRecaptchaSiteKey(activeKey);
+    }, 0);
   }, []);
 
-  // Render the reCAPTCHA widget into the container ref.
-  // Handles both first-load (inject script) and return-visit (script already present) cases.
+  // Load the reCAPTCHA v3 script dynamically.
   useEffect(() => {
     if (!recaptchaSiteKey) return;
 
-    const renderWidget = () => {
-      const container = recaptchaContainerRef.current;
-      if (!container) return;
-      // reCAPTCHA injects an <iframe> when a widget is rendered.
-      // If one already exists in this exact container, skip.
-      if (container.querySelector("iframe")) return;
-      try {
-        const id = window.grecaptcha.render(container, {
-          sitekey: recaptchaSiteKey,
-          theme: "dark",
-        });
-        widgetIdRef.current = id;
-      } catch (err) {
-        console.error("Error rendering reCAPTCHA:", err);
-      }
-    };
-
     const scriptId = "recaptcha-script";
+    let script = document.getElementById(scriptId);
 
-    if (window.grecaptcha && window.grecaptcha.ready) {
-      // Script already loaded — call ready() to ensure API is fully initialised
-      window.grecaptcha.ready(renderWidget);
-    } else if (!document.getElementById(scriptId)) {
-      // First visit — inject the script with an onload callback
-      window.__recaptchaInit = renderWidget;
-      const script = document.createElement("script");
+    if (!script) {
+      script = document.createElement("script");
       script.id = scriptId;
-      script.src =
-        "https://www.google.com/recaptcha/api.js?onload=__recaptchaInit&render=explicit";
+      script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
     } else {
-      // Script tag exists but hasn't finished loading yet — update the callback
-      window.__recaptchaInit = renderWidget;
+      const currentSrc = script.getAttribute("src");
+      if (currentSrc && !currentSrc.includes(recaptchaSiteKey)) {
+        script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
+      }
     }
   }, [recaptchaSiteKey]);
 
@@ -119,53 +98,37 @@ function LoginAndProjectLanding() {
     if (!email.trim()) return setError("Email is required.");
     if (!password) return setError("Password is required.");
 
+    setLoading(true);
+
+    // Check reCAPTCHA if site key is configured
+    let recaptchaToken = undefined;
+    if (recaptchaSiteKey) {
+      if (!window.grecaptcha || !window.grecaptcha.execute) {
+        setLoading(false);
+        return setError(
+          "reCAPTCHA is still loading. Please wait and try again.",
+        );
+      }
+      try {
+        recaptchaToken = await window.grecaptcha.execute(recaptchaSiteKey, {
+          action: "login",
+        });
+      } catch (err) {
+        console.error("reCAPTCHA execution failed:", err);
+        setLoading(false);
+        return setError(
+          "reCAPTCHA verification failed. Please try again.",
+        );
+      }
+    }
+
     if (twoFaRequired) {
       // ── STEP 2: Submit with 2FA code ──
-      if (!twoFaCode.trim()) return setError("2FA Code is required.");
-
-      // Check reCAPTCHA if site key is configured
-      let recaptchaToken = undefined;
-      if (recaptchaSiteKey) {
-        if (!window.grecaptcha) {
-          return setError(
-            "reCAPTCHA is still loading. Please wait and try again.",
-          );
-        }
-        try {
-          recaptchaToken =
-            widgetIdRef.current !== null
-              ? window.grecaptcha.getResponse(widgetIdRef.current)
-              : window.grecaptcha.getResponse();
-        } catch {
-          if (recaptchaContainerRef.current) {
-            recaptchaContainerRef.current.innerHTML = "";
-            window.grecaptcha.ready(() => {
-              try {
-                const id = window.grecaptcha.render(
-                  recaptchaContainerRef.current,
-                  {
-                    sitekey: recaptchaSiteKey,
-                    theme: "dark",
-                  },
-                );
-                widgetIdRef.current = id;
-              } catch (err) {
-                console.error("Error re-rendering reCAPTCHA:", err);
-              }
-            });
-          }
-          return setError(
-            "reCAPTCHA was reset. Please complete the verification and try again.",
-          );
-        }
-        if (!recaptchaToken) {
-          return setError(
-            "Please complete the reCAPTCHA security verification.",
-          );
-        }
+      if (!twoFaCode.trim()) {
+        setLoading(false);
+        return setError("2FA Code is required.");
       }
 
-      setLoading(true);
       try {
         const res = await signIn("credentials", {
           redirect: false,
@@ -177,16 +140,6 @@ function LoginAndProjectLanding() {
 
         if (!res || res.error) {
           setError("Invalid email or password.");
-
-          if (recaptchaSiteKey && window.grecaptcha) {
-            try {
-              if (widgetIdRef.current !== null) {
-                window.grecaptcha.reset(widgetIdRef.current);
-              } else {
-                window.grecaptcha.reset();
-              }
-            } catch (_) { }
-          }
           setLoading(false);
           return;
         }
@@ -195,62 +148,12 @@ function LoginAndProjectLanding() {
         router.replace(callbackUrl);
       } catch {
         setError("Something went wrong. Please try again.");
-        if (recaptchaSiteKey && window.grecaptcha) {
-          try {
-            if (widgetIdRef.current !== null) {
-              window.grecaptcha.reset(widgetIdRef.current);
-            } else {
-              window.grecaptcha.reset();
-            }
-          } catch (_) { }
-        }
         setLoading(false);
       }
       return;
     }
-    let recaptchaToken = undefined;
-    if (recaptchaSiteKey) {
-      if (!window.grecaptcha) {
-        setLoading(false);
-        return setError(
-          "reCAPTCHA is still loading. Please wait and try again.",
-        );
-      }
-      try {
-        recaptchaToken =
-          widgetIdRef.current !== null
-            ? window.grecaptcha.getResponse(widgetIdRef.current)
-            : window.grecaptcha.getResponse();
-      } catch {
-        if (recaptchaContainerRef.current) {
-          recaptchaContainerRef.current.innerHTML = "";
-          window.grecaptcha.ready(() => {
-            try {
-              const id = window.grecaptcha.render(
-                recaptchaContainerRef.current,
-                {
-                  sitekey: recaptchaSiteKey,
-                  theme: "dark",
-                },
-              );
-              widgetIdRef.current = id;
-            } catch (err) {
-              console.error("Error re-rendering reCAPTCHA:", err);
-            }
-          });
-        }
-        setLoading(false);
-        return setError(
-          "reCAPTCHA was reset. Please complete the verification and try again.",
-        );
-      }
-      if (!recaptchaToken) {
-        setLoading(false);
-        return setError("Please complete the reCAPTCHA security verification.");
-      }
-    }
+
     // ── STEP 1: Pre-check if 2FA is required ──
-    setLoading(true);
     try {
       const preRes = await fetch("/api/auth/pre-login", {
         method: "POST",
@@ -260,7 +163,6 @@ function LoginAndProjectLanding() {
       const preData = await preRes.json();
 
       if (preData.data?.twoFARequired) {
-        // Show 2FA input — reset captcha so user completes a fresh challenge
         setTwoFaRequired(true);
         setLoading(false);
         return;
@@ -271,7 +173,6 @@ function LoginAndProjectLanding() {
     }
 
     // ── STEP 2 (no 2FA): Submit normally ──
-
     try {
       const res = await signIn("credentials", {
         redirect: false,
@@ -282,16 +183,6 @@ function LoginAndProjectLanding() {
 
       if (!res || res.error) {
         setError("Invalid email or password.");
-
-        if (recaptchaSiteKey && window.grecaptcha) {
-          try {
-            if (widgetIdRef.current !== null) {
-              window.grecaptcha.reset(widgetIdRef.current);
-            } else {
-              window.grecaptcha.reset();
-            }
-          } catch (_) { }
-        }
         setLoading(false);
         return;
       }
@@ -300,15 +191,6 @@ function LoginAndProjectLanding() {
       router.replace(callbackUrl);
     } catch {
       setError("Something went wrong. Please try again.");
-      if (recaptchaSiteKey && window.grecaptcha) {
-        try {
-          if (widgetIdRef.current !== null) {
-            window.grecaptcha.reset(widgetIdRef.current);
-          } else {
-            window.grecaptcha.reset();
-          }
-        } catch (_) { }
-      }
       setLoading(false);
     }
   }
@@ -568,12 +450,7 @@ function LoginAndProjectLanding() {
                     </>
                   )}
 
-                  {/* reCAPTCHA — explicitly rendered into this ref container */}
-                  {recaptchaSiteKey && (
-                    <div className="flex justify-center my-4 rounded-lg overflow-hidden">
-                      <div ref={recaptchaContainerRef} />
-                    </div>
-                  )}
+                  {/* reCAPTCHA v3 (Invisible) */}
 
                   {/* Error Alert */}
                   {error && (

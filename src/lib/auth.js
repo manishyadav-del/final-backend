@@ -100,6 +100,11 @@ export const authOptions = {
               writeLog("[Auth] Failed: reCAPTCHA verifyJson success is false");
               throw new Error("reCAPTCHA verification failed");
             }
+
+            if (verifyJson.score !== undefined && verifyJson.score < 0.5) {
+              writeLog(`[Auth] Failed: reCAPTCHA v3 score too low: ${verifyJson.score}`);
+              throw new Error("reCAPTCHA validation failed (suspicious activity detected)");
+            }
           } catch (captchaErr) {
             writeLog(`[Auth] reCAPTCHA exception: ${captchaErr.message || captchaErr}`);
             throw new Error(captchaErr.message || "reCAPTCHA verification failed");
