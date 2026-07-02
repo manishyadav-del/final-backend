@@ -35,6 +35,16 @@ export default function CrmDashboardClient({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "reports" || tab === "ads" || tab === "overview") {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
+
   // --- TAB 1: Overview States ---
   const [stats, setStats] = useState(initialStats);
   const [trends, setTrends] = useState(initialTrends);

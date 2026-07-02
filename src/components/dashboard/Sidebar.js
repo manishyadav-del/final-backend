@@ -74,7 +74,7 @@ const crmSections = [
         minRole: "VIEWER",
       },
       {
-        href: "/crm",
+        href: "/crm?tab=reports",
         label: "Advanced Reports",
         icon: BarChart2,
         minRole: "VIEWER",
@@ -314,11 +314,10 @@ function SidebarLink({ href, label, icon: Icon, pathname }) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all border ${
-        isActive
+      className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all border ${isActive
           ? "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50 shadow-sm"
           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white border-transparent"
-      }`}
+        }`}
     >
       <Icon
         size={14}
