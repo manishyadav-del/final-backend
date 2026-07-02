@@ -3,6 +3,18 @@ import { subscriberService } from "@/services/subscriber.service";
 import { getSiteId } from "@/lib/siteGuard";
 import { handleApiError, apiSuccess } from "@/core/errors";
 
+export async function PUT(req, { params }) {
+  try {
+    const siteId = getSiteId(req);
+    const id = params.id;
+    const body = await req.json();
+    const list = await subscriberService.updateList(siteId, id, body);
+    return NextResponse.json(apiSuccess({ list }));
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
 export async function DELETE(req, { params }) {
   try {
     const siteId = getSiteId(req);
@@ -13,3 +25,4 @@ export async function DELETE(req, { params }) {
     return handleApiError(err);
   }
 }
+

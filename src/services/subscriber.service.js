@@ -141,5 +141,28 @@ export const subscriberService = {
     return prisma.subscriberList.delete({
       where: { id, siteId }
     });
+  },
+
+  async updateSubscriber(siteId, id, data) {
+    const { name, status, tags } = data;
+    return prisma.subscriber.update({
+      where: { id, siteId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(status !== undefined && { status }),
+        ...(tags !== undefined && { tags }),
+      }
+    });
+  },
+
+  async updateList(siteId, id, data) {
+    const { name, description } = data;
+    return prisma.subscriberList.update({
+      where: { id, siteId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+      }
+    });
   }
 };

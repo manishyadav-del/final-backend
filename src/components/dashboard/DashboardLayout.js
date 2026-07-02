@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
 
 export default function DashboardLayout({ children, siteId, sites = [] }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (siteId && typeof window !== "undefined") {
+      localStorage.setItem("x-site-id", siteId);
+    }
+  }, [siteId]);
 
   return (
     <div className="dashboard-layout flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
