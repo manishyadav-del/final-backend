@@ -69,7 +69,8 @@ export const authOptions = {
           }
         }
 
-        if (secretKey) {
+        const isDev = process.env.NODE_ENV === "development";
+        if (secretKey && !isDev) {
           const recaptchaToken = credentials?.recaptchaToken;
           writeLog(`[Auth] Token received (length: ${recaptchaToken?.length}): ${recaptchaToken ? recaptchaToken.substring(0, 30) : "empty"}...`);
           if (!recaptchaToken) {

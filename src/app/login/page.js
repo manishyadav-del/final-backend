@@ -102,7 +102,8 @@ function LoginAndProjectLanding() {
 
     // Check reCAPTCHA if site key is configured
     let recaptchaToken = undefined;
-    if (recaptchaSiteKey) {
+    const isDev = process.env.NODE_ENV === "development";
+    if (recaptchaSiteKey && !isDev) {
       if (!window.grecaptcha || !window.grecaptcha.execute) {
         setLoading(false);
         return setError(
