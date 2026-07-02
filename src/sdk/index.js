@@ -344,3 +344,38 @@ export function createCMS({ endpoint, apiKey, siteId } = {}) {
   if (!endpoint) throw new Error("createCMS: endpoint is required");
   return new CMSClient({ baseUrl: endpoint, siteId, apiKey });
 }
+
+/**
+ * Next.js config wrapper to automatically register CRM and Dashboard redirect routes.
+ */
+export function withCMS(nextConfig = {}) {
+  const originalRedirects = nextConfig.redirects;
+
+  nextConfig.redirects = async () => {
+    const crmRedirects = [
+      {
+        source: "/crm",
+        destination: `${process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://localhost:3000"}/crm`,
+        permanent: false,
+      },
+      {
+        source: "/dashboard",
+        destination: `${process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://localhost:3000"}/dashboard`,
+        permanent: false,
+      },
+      {
+        source: "/admin",
+        destination: `${process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://localhost:3000"}/login`,
+        permanent: false,
+      },
+    ];
+
+    if (originalRedirects) {
+      const orig = await originalRedirects();
+      return [...crmRedirects, ...orig];
+    }
+    return crmRedirects;
+  };
+
+  return nextConfig;
+}
