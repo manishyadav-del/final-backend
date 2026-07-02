@@ -384,7 +384,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 <div className="space-y-0.5">
                   {visibleLinks.map((link) => (
                     <SidebarLink
-                      key={link.href}
+                      key={link.label}
                       {...link}
                       pathname={pathname}
                     />
