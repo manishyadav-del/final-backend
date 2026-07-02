@@ -155,10 +155,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold md:text-3xl ">
           Dashboard
         </h1>
-        <p className="text-gray-500 text-sm mt-0.5">
+        <p className="text-gray-500 text-sm mt-0.5 flex flex-wrap items-center gap-1.5">
           Overview for:{" "}
-          <span className="font-semibold text-gray-800">{site.name}</span> (
-          {site.domain || site.id})
+          <span className="font-semibold text-gray-800">{site.name}</span>{" "}
+          {site.domain ? `(${site.domain})` : ""} | Site ID:{" "}
+          <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-indigo-650 dark:text-indigo-400 select-all font-semibold">
+            {site.id}
+          </span>
         </p>
       </div>
 
@@ -294,7 +297,7 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-slate-400 italic truncate">
-                      "{item.message}"
+                      &quot;{item.message}&quot;
                     </p>
                   </div>
                 ))
