@@ -4,7 +4,7 @@ import AuthProvider from "@/components/providers/SessionProvider";
 import prisma from "@/lib/prisma";
 import AnalyticsScripts from "@/components/utils/AnalyticsScripts";
 import ClientScripts from "@/components/utils/ClientScripts";
-import { ThemeProvider } from "next-themes";
+import ThemeProvider from "@/components/providers/ThemeProvider";
 import SessionTimeoutHandler from "@/components/utils/SessionTimeoutHandler";
 import { Toaster } from "sonner";
 
