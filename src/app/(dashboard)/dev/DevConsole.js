@@ -546,8 +546,8 @@ export default function DevConsole({
                 )}
               </div>
             </div>
-            {integrationKey && (
-              <div className="flex gap-2">
+            <div className="flex gap-2">
+              {integrationKey && (
                 <button
                   onClick={() => copyToClipboard(integrationKey)}
                   className="flex items-center gap-1 px-3 py-1.5 border rounded-lg bg-white hover:bg-gray-100 text-gray-600 font-bold text-xs transition select-none cursor-pointer"
@@ -559,19 +559,19 @@ export default function DevConsole({
                   )}
                   Copy Key
                 </button>
-                <button
-                  onClick={handleRotateIntegrationKey}
-                  disabled={rotatingIntegrationKey}
-                  className="flex items-center gap-1 px-3 py-1.5 border rounded-lg bg-white hover:bg-red-50 text-red-600 border-red-100 font-bold text-xs transition disabled:opacity-50 select-none cursor-pointer"
-                >
-                  <RefreshCw
-                    size={14}
-                    className={rotatingIntegrationKey ? "animate-spin" : ""}
-                  />
-                  Regenerate
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                onClick={handleRotateIntegrationKey}
+                disabled={rotatingIntegrationKey}
+                className="flex items-center gap-1 px-3 py-1.5 border rounded-lg bg-white hover:bg-indigo-50 text-indigo-600 border-indigo-100 font-bold text-xs transition disabled:opacity-50 select-none cursor-pointer"
+              >
+                <RefreshCw
+                  size={14}
+                  className={rotatingIntegrationKey ? "animate-spin" : ""}
+                />
+                {integrationKey ? "Regenerate" : "Generate Key"}
+              </button>
+            </div>
           </div>
         </div>
       )}
