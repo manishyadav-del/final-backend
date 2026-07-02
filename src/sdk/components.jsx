@@ -1958,7 +1958,7 @@ export function RichTextRenderer({ content, className = "" }) {
 export function OneSignalScript({ settings }) {
   if (!settings) return null;
   const emailSettings = settings.emailSettings || {};
-  const appId = emailSettings.oneSignalAppId;
+  const appId = settings.oneSignalAppId || emailSettings.oneSignalAppId;
   if (!appId) return null;
 
   return (
