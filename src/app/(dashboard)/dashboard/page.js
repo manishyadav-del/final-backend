@@ -43,7 +43,7 @@ const allActions = [
   {
     label: "Leads CRM",
     desc: "Manage customer form inquiries",
-    href: "/leads",
+    href: "/crm/leads",
     icon: Inbox,
     roles: ["EDITOR"],
   },
@@ -88,13 +88,6 @@ const allActions = [
     href: "/blogs",
     icon: FileText,
     roles: ["SUPERADMIN", "ADMIN", "EDITOR", "AUTHOR"],
-  },
-  {
-    label: "Visitor Analytics",
-    desc: "Track traffic & audience logs",
-    href: "/visitors",
-    icon: BarChart2,
-    roles: ["SUPERADMIN", "ADMIN", "EDITOR", "AUTHOR", "VIEWER"],
   },
 ];
 
