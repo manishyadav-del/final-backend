@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Script from "next/script";
 import DOMPurify from "isomorphic-dompurify";
+import { usePathname } from "next/navigation";
 /**
  * GlobalAnalytics Component
  * Injects Google Analytics, Microsoft Clarity, Facebook Pixel, LinkedIn Insight Tag,
@@ -36,6 +37,8 @@ export function GlobalAnalytics({ settings }) {
     getConsentState(settings?.compliance || {}),
   );
 
+  const pathname = usePathname();
+
   React.useEffect(() => {
     const updateConsent = () => {
       setConsent(getConsentState(settings?.compliance || {}));
@@ -49,6 +52,43 @@ export function GlobalAnalytics({ settings }) {
       window.removeEventListener("cookieConsentChanged", updateConsent);
     };
   }, [settings?.compliance]);
+
+  React.useEffect(() => {
+    let visitorId = localStorage.getItem("visitor_id");
+    if (!visitorId) {
+      visitorId = `visitor_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem("visitor_id", visitorId);
+    }
+
+    const trackPageview = async () => {
+      try {
+        const resolvedBaseUrl = process.env.NEXT_PUBLIC_CMS_BASE_URL || "http://localhost:3000";
+        const resolvedSiteId = process.env.NEXT_PUBLIC_SITE_ID || "infinium";
+        const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "Unknown";
+        const trafficSource = typeof document !== "undefined" ? document.referrer : "";
+
+        await fetch(
+          `${resolvedBaseUrl.replace(/\/$/, "")}/api/visitors/ping`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              siteId: resolvedSiteId,
+              visitorId,
+              pageViewed: pathname || "/",
+              deviceInfo,
+              trafficSource,
+              location: "Local Session",
+            }),
+          },
+        );
+      } catch (err) {
+        console.error("Failed to track visitor pageview:", err);
+      }
+    };
+
+    trackPageview();
+  }, [pathname]);
 
   if (!settings) return null;
 
