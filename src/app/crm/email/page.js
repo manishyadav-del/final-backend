@@ -12,7 +12,7 @@ export default async function EmailSettingsPage() {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900">Email Settings</h1>
-        <p className="mt-4 text-sm text-red-600">No active site found. Please configure a site in the database.</p>
+        <p className="mt-4 text-sm text-red-650">No active site found. Please configure a site in the database.</p>
       </div>
     );
   }

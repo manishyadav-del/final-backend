@@ -1,11 +1,10 @@
 import { analyticsService } from "@/services/analytics.service";
-
 import { requireAuth } from "@/lib/requireAuth";
 import { getSiteForUser } from "@/lib/getSiteForUser";
 import VisitorDashboardClient from "@/components/dashboard/VisitorDashboardClient";
 
 export const metadata = {
-  title: "Live Visitor Dashboard | Global CMS",
+  title: "Live Visitor Dashboard | Marketing CRM",
   description: "Real-time analytics: live visitors, page views, location, device, traffic source, session duration, and visitor logs.",
 };
 

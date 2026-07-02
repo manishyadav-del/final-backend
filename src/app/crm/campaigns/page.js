@@ -39,12 +39,14 @@ export default function CampaignsPage() {
       const res = await fetch("/api/crm/campaigns", {
         headers: { "x-site-id": siteId }
       });
-      const data = await res.json();
-      if (data.success) {
-        setCampaigns(data.data.campaigns || []);
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setCampaigns(data.data?.campaigns || []);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("fetchCampaigns failed:", err);
     }
     setLoading(false);
   };
@@ -54,12 +56,14 @@ export default function CampaignsPage() {
       const res = await fetch("/api/crm/lists", {
         headers: { "x-site-id": siteId }
       });
-      const data = await res.json();
-      if (data.success) {
-        setLists(data.data.lists || []);
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setLists(data.data?.lists || []);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("fetchLists failed:", err);
     }
   };
 
@@ -68,12 +72,14 @@ export default function CampaignsPage() {
       const res = await fetch("/api/crm/templates", {
         headers: { "x-site-id": siteId }
       });
-      const data = await res.json();
-      if (data.success) {
-        setTemplates(data.data.templates || []);
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setTemplates(data.data?.templates || []);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("fetchTemplates failed:", err);
     }
   };
 

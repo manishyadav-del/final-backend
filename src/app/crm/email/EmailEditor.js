@@ -690,7 +690,7 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
                     type="button"
                     onClick={handleClearLogs}
                     disabled={isClearing}
-                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold px-3 py-1.5 rounded-lg border border-red-200 text-xs shadow-xs transition disabled:opacity-50"
+                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-755 font-bold px-3 py-1.5 rounded-lg border border-red-205 text-xs shadow-xs transition disabled:opacity-50"
                   >
                     <Trash2 size={13} />
                     {isClearing ? "Purging..." : "Clear Logs"}
@@ -738,7 +738,7 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
                             {log.context || "smtp-test"}
                           </span>
                         </td>
-                        <td className="p-3 text-red-600 font-mono leading-relaxed select-all break-all">
+                        <td className="p-3 text-red-650 font-mono leading-relaxed select-all break-all">
                           {log.error}
                         </td>
                       </tr>
@@ -768,7 +768,7 @@ export default function EmailEditor({ siteId, initialEmailSettings }) {
 
         {/* Submit Actions Bar */}
         {activeTab !== "logs" && (
-          <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-250 flex justify-between items-center">
+          <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-200 flex justify-between items-center">
             <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               Ensure credentials match outbound security policies (TLS 587 or

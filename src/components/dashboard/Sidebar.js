@@ -67,6 +67,18 @@ const crmSections = [
         icon: UsersRound,
         minRole: "EDITOR",
       },
+      {
+        href: "/crm/visitors",
+        label: "Analytics Dashboard",
+        icon: BarChart2,
+        minRole: "VIEWER",
+      },
+      {
+        href: "/crm",
+        label: "Advanced Reports",
+        icon: BarChart2,
+        minRole: "VIEWER",
+      },
     ],
   },
   {
@@ -90,6 +102,12 @@ const crmSections = [
         icon: Bell,
         minRole: "EDITOR",
       },
+      {
+        href: "/crm/ads",
+        label: "Advertisement Management",
+        icon: Megaphone,
+        minRole: "EDITOR",
+      },
     ],
   },
   {
@@ -108,7 +126,18 @@ const crmSections = [
         minRole: "EDITOR",
       },
     ],
-  }
+  },
+  {
+    title: "System Settings",
+    links: [
+      {
+        href: "/crm/email",
+        label: "Email Settings",
+        icon: Mail,
+        minRole: "ADMIN",
+      },
+    ],
+  },
 ];
 
 const sections = [
@@ -136,18 +165,6 @@ const sections = [
         href: "/leads",
         label: "Leads CRM",
         icon: Inbox,
-        minRole: "EDITOR",
-      },
-      {
-        href: "/visitors",
-        label: "Analytics",
-        icon: BarChart2,
-        minRole: "VIEWER",
-      },
-      {
-        href: "/ads",
-        label: "Ads Manager",
-        icon: Megaphone,
         minRole: "EDITOR",
       },
     ],
@@ -211,18 +228,6 @@ const sections = [
         minRole: "ADMIN",
       },
       {
-        href: "/newsletter",
-        label: "Newsletter",
-        icon: Mail,
-        minRole: "EDITOR",
-      },
-      {
-        href: "/ads",
-        label: "Advertisements",
-        icon: Megaphone,
-        minRole: "EDITOR",
-      },
-      {
         href: "/seo",
         label: "SEO",
         icon: BarChart2,
@@ -274,12 +279,6 @@ const sections = [
         href: "/users",
         label: "Users",
         icon: Users,
-        minRole: "ADMIN",
-      },
-      {
-        href: "/email",
-        label: "Email",
-        icon: Mail,
         minRole: "ADMIN",
       },
       {

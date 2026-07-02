@@ -164,5 +164,40 @@ export const subscriberService = {
         ...(description !== undefined && { description }),
       }
     });
+  },
+
+  async getListMembers(siteId, listId) {
+    const members = await prisma.subscriberListMember.findMany({
+      where: { listId, subscriber: { siteId } },
+      include: { subscriber: true }
+    });
+    return members.map(m => m.subscriber);
+  },
+
+  async addSubscriberToList(siteId, listId, subscriberId) {
+    // Verify ownership of both list and subscriber
+    const list = await prisma.subscriberList.findFirst({ where: { id: listId, siteId } });
+    const sub = await prisma.subscriber.findFirst({ where: { id: subscriberId, siteId } });
+    if (!list || !sub) throw new Error("List or Subscriber not found");
+
+    return prisma.subscriberListMember.upsert({
+      where: {
+        listId_subscriberId: { listId, subscriberId }
+      },
+      update: {},
+      create: { listId, subscriberId }
+    });
+  },
+
+  async removeSubscriberFromList(siteId, listId, subscriberId) {
+    // Verify ownership
+    const list = await prisma.subscriberList.findFirst({ where: { id: listId, siteId } });
+    if (!list) throw new Error("List not found");
+
+    return prisma.subscriberListMember.delete({
+      where: {
+        listId_subscriberId: { listId, subscriberId }
+      }
+    });
   }
 };

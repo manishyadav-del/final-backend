@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Tag, Layers, RefreshCw, BarChart2, Eye, MousePointer } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Layers, RefreshCw, BarChart2, Eye, MousePointer } from "lucide-react";
 
 export default function AdsPage() {
   const [ads, setAds] = useState([]);
@@ -19,26 +18,37 @@ export default function AdsPage() {
     isActive: true,
   });
 
-  const [activeTab, setActiveTab] = useState("ads"); // "ads" or "zones" or "analytics"
+  const [activeTab, setActiveTab] = useState("ads"); // "ads" or "zones"
+  const [siteId, setSiteId] = useState("");
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
+    setSiteId(id);
   }, []);
+
+  useEffect(() => {
+    if (siteId) {
+      fetchData();
+    }
+  }, [siteId]);
 
   const fetchData = async () => {
     setLoading(true);
+    setSaveError(null);
     try {
       const [adsRes, zonesRes] = await Promise.all([
-        fetch("/api/admin/ads"),
-        fetch("/api/admin/ads/zones")
+        fetch("/api/admin/ads", { headers: { "x-site-id": siteId } }),
+        fetch("/api/admin/ads/zones", { headers: { "x-site-id": siteId } })
       ]);
-      const adsData = await adsRes.json();
-      const zonesData = await zonesRes.json();
-
-      if (adsData.success) setAds(adsData.data.ads || []);
-      if (zonesData.success) setZones(zonesData.data.zones || []);
+      if (adsRes.ok && zonesRes.ok) {
+        const adsData = await adsRes.json().catch(() => ({}));
+        const zonesData = await zonesRes.json().catch(() => ({}));
+        if (adsData.success) setAds(adsData.data?.ads || []);
+        if (zonesData.success) setZones(zonesData.data?.zones || []);
+      }
     } catch (e) {
-      toast.error("Failed to load advertising data");
+      console.error("Failed to load advertising data:", e);
     } finally {
       setLoading(false);
     }
@@ -46,40 +56,46 @@ export default function AdsPage() {
 
   const handleCreateZone = async (e) => {
     e.preventDefault();
+    setSaveError(null);
     try {
       const res = await fetch("/api/admin/ads/zones", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-site-id": siteId
+        },
         body: JSON.stringify({
           name: newZone.name,
           width: newZone.width ? Number(newZone.width) : null,
           height: newZone.height ? Number(newZone.height) : null,
         })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.success) {
-        toast.success("Ad Zone created successfully!");
         setNewZone({ name: "", width: "", height: "" });
         fetchData();
       } else {
-        toast.error(data.error || "Failed to create ad zone");
+        setSaveError(data.error || "Failed to create ad zone");
       }
     } catch (err) {
-      toast.error("Error creating ad zone");
+      setSaveError("Error creating ad zone");
     }
   };
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
+    setSaveError(null);
     try {
       const res = await fetch("/api/admin/ads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-site-id": siteId
+        },
         body: JSON.stringify(newAd)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.success) {
-        toast.success("Ad created successfully!");
         setNewAd({
           zoneId: "",
           name: "",
@@ -91,10 +107,10 @@ export default function AdsPage() {
         });
         fetchData();
       } else {
-        toast.error(data.error || "Failed to create ad");
+        setSaveError(data.error || "Failed to create ad");
       }
     } catch (err) {
-      toast.error("Error creating ad");
+      setSaveError("Error creating ad");
     }
   };
 
@@ -102,17 +118,15 @@ export default function AdsPage() {
     if (!confirm("Are you sure you want to delete this ad?")) return;
     try {
       const res = await fetch(`/api/admin/ads/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: { "x-site-id": siteId }
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.success) {
-        toast.success("Ad deleted successfully");
         fetchData();
-      } else {
-        toast.error(data.error || "Failed to delete ad");
       }
     } catch (err) {
-      toast.error("Error deleting ad");
+      console.error(err);
     }
   };
 
@@ -122,11 +136,11 @@ export default function AdsPage() {
   const totalCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0.00";
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 w-full">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Advertisement Management</h1>
-          <p className="text-xs text-slate-400">Configure Adsense layouts, banner promotions, and track conversion rates.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Advertisement Management</h1>
+          <p className="text-slate-500 text-xs mt-1">Configure AdSense layouts, banner promotions, and track conversion rates.</p>
         </div>
         <button
           onClick={fetchData}
@@ -139,31 +153,31 @@ export default function AdsPage() {
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 rounded-lg">
+          <div className="p-3 bg-indigo-50 dark:bg-indigo-950 text-indigo-605 rounded-lg">
             <Eye size={20} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Total Impressions</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block mb-0.5">Total Impressions</span>
             <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{totalImpressions.toLocaleString()}</span>
           </div>
         </div>
 
         <div className="p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 rounded-lg">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 rounded-lg">
             <MousePointer size={20} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Total Clicks</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block mb-0.5">Total Clicks</span>
             <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{totalClicks.toLocaleString()}</span>
           </div>
         </div>
 
         <div className="p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 rounded-lg">
+          <div className="p-3 bg-amber-50 dark:bg-amber-950 text-amber-600 rounded-lg">
             <BarChart2 size={20} />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-0.5">Average CTR</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-450 block mb-0.5">Average CTR</span>
             <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{totalCtr}%</span>
           </div>
         </div>
@@ -174,7 +188,7 @@ export default function AdsPage() {
         <button
           onClick={() => setActiveTab("ads")}
           className={`pb-2.5 text-xs font-bold transition-all relative ${
-            activeTab === "ads" ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600" : "text-slate-400"
+            activeTab === "ads" ? "text-indigo-650 dark:text-indigo-400 border-b-2 border-indigo-600" : "text-slate-400"
           }`}
         >
           Active Campaigns
@@ -182,7 +196,7 @@ export default function AdsPage() {
         <button
           onClick={() => setActiveTab("zones")}
           className={`pb-2.5 text-xs font-bold transition-all relative ${
-            activeTab === "zones" ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600" : "text-slate-400"
+            activeTab === "zones" ? "text-indigo-650 dark:text-indigo-400 border-b-2 border-indigo-600" : "text-slate-400"
           }`}
         >
           Ad Placement Zones
@@ -201,7 +215,7 @@ export default function AdsPage() {
               {loading ? (
                 <div className="p-8 text-center text-xs text-slate-400">Loading campaign list...</div>
               ) : ads.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">No ad campaigns configured. Create one on the right!</div>
+                <div className="p-8 text-center text-xs text-slate-450">No ad campaigns configured. Create one on the right!</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -215,7 +229,7 @@ export default function AdsPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-xs">
                       {ads.map((ad) => (
-                        <tr key={ad.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        <tr key={ad.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850">
                           <td className="p-3">
                             <div className="font-semibold text-slate-800 dark:text-slate-100">{ad.name}</div>
                             <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{ad.type}</div>
@@ -232,7 +246,7 @@ export default function AdsPage() {
                           <td className="p-3 text-right">
                             <button
                               onClick={() => handleDeleteAd(ad.id)}
-                              className="text-xs text-rose-500 hover:text-rose-700 font-semibold"
+                              className="text-xs text-rose-600 hover:text-rose-700 font-semibold"
                             >
                               Delete
                             </button>
@@ -248,7 +262,7 @@ export default function AdsPage() {
 
           {/* Create Ad Form */}
           <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 p-5 rounded-xl space-y-4 h-fit">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-350 flex items-center gap-1.5">
               <Plus size={14} /> Create Ad Campaign
             </h3>
             <form onSubmit={handleCreateAd} className="space-y-3">
@@ -289,7 +303,7 @@ export default function AdsPage() {
                     onClick={() => setNewAd({ ...newAd, type: "banner" })}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                       newAd.type === "banner"
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20"
+                        ? "bg-indigo-50 border-indigo-250 text-indigo-650 dark:bg-indigo-950/20"
                         : "border-slate-200 text-slate-400"
                     }`}
                   >
@@ -300,7 +314,7 @@ export default function AdsPage() {
                     onClick={() => setNewAd({ ...newAd, type: "adsense" })}
                     className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                       newAd.type === "adsense"
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/20"
+                        ? "bg-indigo-50 border-indigo-250 text-indigo-650 dark:bg-indigo-950/20"
                         : "border-slate-200 text-slate-400"
                     }`}
                   >
@@ -345,9 +359,10 @@ export default function AdsPage() {
                 </div>
               )}
 
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold mt-2">
+              <button type="submit" className="w-full py-2 bg-indigo-650 text-white rounded-lg text-xs font-bold mt-2">
                 Deploy Campaign
               </button>
+              {saveError && <p className="text-red-500 text-xs font-semibold">{saveError}</p>}
             </form>
           </div>
         </div>
@@ -385,7 +400,7 @@ export default function AdsPage() {
 
           {/* Create Zone Form */}
           <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 p-5 rounded-xl space-y-4 h-fit">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-350 flex items-center gap-1.5">
               <Layers size={14} /> Create Placement Zone
             </h3>
             <form onSubmit={handleCreateZone} className="space-y-3">
@@ -405,28 +420,29 @@ export default function AdsPage() {
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Width (px)</label>
                   <input
-                     type="number"
-                     placeholder="728"
-                     value={newZone.width}
-                     onChange={(e) => setNewZone({ ...newZone, width: e.target.value })}
-                     className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 outline-none"
+                    type="number"
+                    placeholder="728"
+                    value={newZone.width}
+                    onChange={(e) => setNewZone({ ...newZone, width: e.target.value })}
+                    className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Height (px)</label>
                   <input
-                     type="number"
-                     placeholder="90"
-                     value={newZone.height}
-                     onChange={(e) => setNewZone({ ...newZone, height: e.target.value })}
-                     className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 outline-none"
+                    type="number"
+                    placeholder="90"
+                    value={newZone.height}
+                    onChange={(e) => setNewZone({ ...newZone, height: e.target.value })}
+                    className="w-full p-2 border rounded-lg text-xs dark:bg-slate-900 outline-none"
                   />
                 </div>
               </div>
 
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold mt-2">
+              <button type="submit" className="w-full py-2 bg-indigo-650 text-white rounded-lg text-xs font-bold mt-2">
                 Create Zone
               </button>
+              {saveError && <p className="text-red-500 text-xs font-semibold">{saveError}</p>}
             </form>
           </div>
         </div>

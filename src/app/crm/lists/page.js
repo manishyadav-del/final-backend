@@ -1,19 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UsersRound, Trash2, Plus, Users, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { UsersRound, Trash2, Plus, Users, CheckSquare, Square, AlertTriangle, UserPlus, X, Check } from "lucide-react";
 
 export default function ListsPage() {
   const [lists, setLists] = useState([]);
+  const [allSubscribers, setAllSubscribers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newList, setNewList] = useState({ name: "", description: "" });
   const [siteId, setSiteId] = useState("");
   const [saveError, setSaveError] = useState(null);
 
+  // Bulk select state
   const [selected, setSelected] = useState(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [totalSubscribers, setTotalSubscribers] = useState(0);
+
+  // Member management modal state
+  const [activeListId, setActiveListId] = useState(null);
+  const [activeListName, setActiveListName] = useState("");
+  const [listMembers, setListMembers] = useState(new Set());
+  const [modalLoading, setModalLoading] = useState(false);
+
+  // Quick Add Subscriber inside Modal state
+  const [quickSub, setQuickSub] = useState({ name: "", email: "" });
+  const [quickSubError, setQuickSubError] = useState(null);
 
   useEffect(() => {
     const id = localStorage.getItem("x-site-id") || process.env.NEXT_PUBLIC_SITE_ID || "";
@@ -21,7 +33,10 @@ export default function ListsPage() {
   }, []);
 
   useEffect(() => {
-    if (siteId) fetchLists();
+    if (siteId) {
+      fetchLists();
+      fetchAllSubscribers();
+    }
   }, [siteId]);
 
   const fetchLists = async () => {
@@ -31,20 +46,39 @@ export default function ListsPage() {
         fetch("/api/crm/lists", { headers: { "x-site-id": siteId } }),
         fetch("/api/crm/subscribers?take=1", { headers: { "x-site-id": siteId } })
       ]);
-      const dataLists = await resLists.json();
-      const dataSubs = await resSubs.json();
 
-      if (dataLists.success) {
-        setLists(dataLists.data?.lists || []);
-        setSelected(new Set());
-      }
-      if (dataSubs.success) {
-        setTotalSubscribers(dataSubs.data?.total || 0);
+      if (resLists.ok && resSubs.ok) {
+        const dataLists = await resLists.json().catch(() => ({}));
+        const dataSubs = await resSubs.json().catch(() => ({}));
+
+        if (dataLists.success) {
+          setLists(dataLists.data?.lists || []);
+          setSelected(new Set());
+        }
+        if (dataSubs.success) {
+          setTotalSubscribers(dataSubs.data?.total || 0);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("fetchLists failed:", err);
     }
     setLoading(false);
+  };
+
+  const fetchAllSubscribers = async () => {
+    try {
+      const res = await fetch("/api/crm/subscribers?take=500", {
+        headers: { "x-site-id": siteId }
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setAllSubscribers(data.data?.subscribers || []);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load subscribers:", err);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -122,6 +156,127 @@ export default function ListsPage() {
       console.error(err);
     }
     setBulkDeleting(false);
+  };
+
+  // Modal actions
+  const openManageMembersModal = async (list) => {
+    setActiveListId(list.id);
+    setActiveListName(list.name);
+    setModalLoading(true);
+    setQuickSub({ name: "", email: "" });
+    setQuickSubError(null);
+    try {
+      const res = await fetch(`/api/crm/lists/${list.id}/members`, {
+        headers: { "x-site-id": siteId }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const memberIds = new Set(data.data.members.map(m => m.id));
+        setListMembers(memberIds);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setModalLoading(false);
+  };
+
+  const handleToggleMember = async (subscriberId) => {
+    const isMember = listMembers.has(subscriberId);
+    try {
+      if (isMember) {
+        // Remove member
+        const res = await fetch(`/api/crm/lists/${activeListId}/members?subscriberId=${subscriberId}`, {
+          method: "DELETE",
+          headers: { "x-site-id": siteId }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setListMembers(prev => {
+            const next = new Set(prev);
+            next.delete(subscriberId);
+            return next;
+          });
+          fetchLists(); // Update counts in list view
+        }
+      } else {
+        // Add member
+        const res = await fetch(`/api/crm/lists/${activeListId}/members`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-site-id": siteId
+          },
+          body: JSON.stringify({ subscriberId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.success) {
+          setListMembers(prev => {
+            const next = new Set(prev);
+            next.add(subscriberId);
+            return next;
+          });
+          fetchLists(); // Update counts in list view
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Quick Add Subscriber directly in modal
+  const handleQuickAddSubscriber = async (e) => {
+    e.preventDefault();
+    setQuickSubError(null);
+    if (!quickSub.email || !quickSub.email.includes("@")) {
+      return setQuickSubError("Please provide a valid email.");
+    }
+    try {
+      // 1. Create Subscriber
+      const res = await fetch("/api/crm/subscribers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-site-id": siteId
+        },
+        body: JSON.stringify({
+          name: quickSub.name,
+          email: quickSub.email,
+          status: "active",
+          tags: "list-quick-add"
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success && data.data?.subscriber) {
+        const newSubId = data.data.subscriber.id;
+        
+        // 2. Add to active list
+        const resAdd = await fetch(`/api/crm/lists/${activeListId}/members`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-site-id": siteId
+          },
+          body: JSON.stringify({ subscriberId: newSubId })
+        });
+        const dataAdd = await resAdd.json().catch(() => ({}));
+        if (dataAdd.success) {
+          // Refresh lists
+          setQuickSub({ name: "", email: "" });
+          await fetchAllSubscribers();
+          setListMembers(prev => {
+            const next = new Set(prev);
+            next.add(newSubId);
+            return next;
+          });
+          fetchLists();
+        }
+      } else {
+        setQuickSubError(data.error || "Failed to create subscriber.");
+      }
+    } catch (err) {
+      console.error(err);
+      setQuickSubError("Error: " + err.message);
+    }
   };
 
   return (
@@ -221,15 +376,20 @@ export default function ListsPage() {
           lists.map((list) => (
             <div
               key={list.id}
-              onClick={() => toggleSelect(list.id)}
-              className={`p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl flex flex-col justify-between hover:shadow-sm transition cursor-pointer ${selected.has(list.id) ? "ring-2 ring-indigo-500 border-indigo-400" : ""}`}
+              className={`p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl flex flex-col justify-between hover:shadow-sm transition ${selected.has(list.id) ? "ring-2 ring-indigo-500 border-indigo-400" : ""}`}
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    {selected.has(list.id)
-                      ? <CheckSquare size={13} className="text-indigo-600 flex-shrink-0" />
-                      : <Square size={13} className="text-slate-300 flex-shrink-0" />}
+                    <button
+                      type="button"
+                      onClick={() => toggleSelect(list.id)}
+                      className="text-slate-400 hover:text-indigo-600 transition"
+                    >
+                      {selected.has(list.id)
+                        ? <CheckSquare size={14} className="text-indigo-600" />
+                        : <Square size={14} />}
+                    </button>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">{list.name}</h3>
                   </div>
                   <div className="flex p-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded">
@@ -245,10 +405,17 @@ export default function ListsPage() {
                 </div>
               </div>
 
-              <div className="flex gap-1 justify-end items-center mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex gap-2 justify-end items-center mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(list.id); }}
-                  className="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition"
+                  type="button"
+                  onClick={() => openManageMembersModal(list)}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 text-white rounded text-[11px] font-semibold hover:bg-indigo-700 transition"
+                >
+                  <UserPlus size={11} /> Manage Members
+                </button>
+                <button
+                  onClick={() => handleDelete(list.id)}
+                  className="p-1 bg-red-50 text-red-650 rounded hover:bg-red-100 transition"
                 >
                   <Trash2 size={11} />
                 </button>
@@ -257,6 +424,99 @@ export default function ListsPage() {
           ))
         )}
       </div>
+
+      {/* Manage Members Modal Overlay */}
+      {activeListId && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/30">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">Add/Remove Members</h3>
+                <p className="text-slate-450 text-[10px]">List: <span className="font-semibold">{activeListName}</span></p>
+              </div>
+              <button
+                onClick={() => { setActiveListId(null); setActiveListName(""); }}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Create and Add Form */}
+            <form onSubmit={handleQuickAddSubscriber} className="p-4 bg-indigo-50/50 dark:bg-slate-900/40 border-b dark:border-slate-700 space-y-2">
+              <p className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Quick Create & Add Subscriber</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={quickSub.name}
+                  onChange={(e) => setQuickSub({ ...quickSub, name: e.target.value })}
+                  className="p-1.5 border rounded text-xs dark:bg-slate-950 w-1/3"
+                />
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  required
+                  value={quickSub.email}
+                  onChange={(e) => setQuickSub({ ...quickSub, email: e.target.value })}
+                  className="p-1.5 border rounded text-xs dark:bg-slate-950 flex-1"
+                />
+                <button
+                  type="submit"
+                  className="px-3 bg-indigo-650 text-white rounded text-xs font-bold hover:bg-indigo-700 transition flex items-center gap-1"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              </div>
+              {quickSubError && <p className="text-red-500 text-[10px] font-semibold">{quickSubError}</p>}
+            </form>
+
+            {/* Modal Content - List of existing subscribers */}
+            <div className="p-4 overflow-y-auto flex-1 space-y-3">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select from Registered Subscribers</p>
+              {modalLoading ? (
+                <div className="text-center p-8 text-xs text-slate-400">Loading current list members...</div>
+              ) : allSubscribers.length === 0 ? (
+                <div className="text-center p-8 text-xs text-slate-450">
+                  No subscribers registered yet. Use the form above to add one instantly!
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {allSubscribers.map((sub) => {
+                    const isMember = listMembers.has(sub.id);
+                    return (
+                      <div
+                        key={sub.id}
+                        onClick={() => handleToggleMember(sub.id)}
+                        className="py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-700/20 px-2 rounded-lg transition"
+                      >
+                        <div>
+                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{sub.name || "Anonymous"}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{sub.email}</p>
+                        </div>
+                        <div className={`p-1 rounded-md transition ${isMember ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-450"}`}>
+                          {isMember ? <Check size={12} /> : <Plus size={12} />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex justify-end">
+              <button
+                onClick={() => { setActiveListId(null); setActiveListName(""); }}
+                className="px-4 py-1.5 bg-indigo-650 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
