@@ -1,132 +1,81 @@
-import { NextResponse } from "next/server";
-import { checkSitePermission } from "@/lib/apiAuth";
-import prisma from "@/lib/prisma";
-import { handleApiError, apiSuccess, ValidationError } from "@/core/errors";
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { checkSitePermission } from '@/lib/apiAuth';
+import { z } from 'zod';
+import { apiSuccess } from '@/core/errors';
+
+const CreateAdSchema = z.object({
+  zoneId: z.string().min(1),
+  name: z.string().min(1),
+  type: z.enum(['banner', 'adsense']),
+  code: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  targetUrl: z.string().nullable().optional(),
+  isActive: z.boolean().default(true),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
+});
 
 export async function GET(req) {
-  const auth = await checkSitePermission(req, "EDITOR");
+  const auth = await checkSitePermission(req, 'EDITOR');
   if (auth.error) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
   try {
-    const ads = await prisma.advertisement.findMany({
+    const ads = await prisma.ad.findMany({
       where: {
-        siteId: auth.siteId,
-        deletedAt: null,
+        zone: { siteId: auth.siteId }
+      },
+      include: {
+        zone: true
       },
       orderBy: {
-        createdAt: "desc",
-      },
+        createdAt: 'desc'
+      }
     });
     return NextResponse.json(apiSuccess({ ads }));
   } catch (err) {
-    return handleApiError(err);
+    console.error('Fetch ads error:', err);
+    return NextResponse.json({ error: 'Failed to fetch ads' }, { status: 500 });
   }
 }
 
 export async function POST(req) {
-  const auth = await checkSitePermission(req, "EDITOR");
+  const auth = await checkSitePermission(req, 'EDITOR');
   if (auth.error) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
   try {
-    const body = await req.json().catch(() => ({}));
-    const { name, type, adsenseCode, imageUrl, targetUrl, position, active } = body;
-
-    if (!name) throw new ValidationError("Advertisement Name is required");
-    if (!type || (type !== "BANNER" && type !== "ADSENSE")) {
-      throw new ValidationError("Type must be 'BANNER' or 'ADSENSE'");
+    const body = await req.json();
+    const data = CreateAdSchema.parse(body);
+    const zone = await prisma.adZone.findFirst({
+      where: {
+        id: data.zoneId,
+        siteId: auth.siteId
+      }
+    });
+    if (!zone) {
+      return NextResponse.json({ error: 'Selected zone not found for this site' }, { status: 404 });
     }
-    if (!position) throw new ValidationError("Position is required");
-
-    const ad = await prisma.advertisement.create({
+    const ad = await prisma.ad.create({
       data: {
-        siteId: auth.siteId,
-        name,
-        type,
-        adsenseCode: type === "ADSENSE" ? adsenseCode : null,
-        imageUrl: type === "BANNER" ? imageUrl : null,
-        targetUrl: type === "BANNER" ? targetUrl : null,
-        position,
-        active: active ?? true,
-      },
+        zoneId: data.zoneId,
+        name: data.name,
+        type: data.type,
+        code: data.code || null,
+        imageUrl: data.imageUrl || null,
+        targetUrl: data.targetUrl || null,
+        isActive: data.isActive,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
+      }
     });
-
-    return NextResponse.json(apiSuccess({ ad }));
+    return NextResponse.json(apiSuccess({ ad }), { status: 201 });
   } catch (err) {
-    return handleApiError(err);
-  }
-}
-
-export async function PUT(req) {
-  const auth = await checkSitePermission(req, "EDITOR");
-  if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
-  try {
-    const body = await req.json().catch(() => ({}));
-    const { id, name, type, adsenseCode, imageUrl, targetUrl, position, active } = body;
-
-    if (!id) throw new ValidationError("Advertisement ID is required");
-
-    const existing = await prisma.advertisement.findFirst({
-      where: { id, siteId: auth.siteId, deletedAt: null },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Advertisement not found" }, { status: 404 });
+    console.error('Create ad error:', err);
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Validation error', details: err.errors }, { status: 400 });
     }
-
-    const updated = await prisma.advertisement.update({
-      where: { id },
-      data: {
-        name: name !== undefined ? name : undefined,
-        type: type !== undefined ? type : undefined,
-        adsenseCode: type === "ADSENSE" ? adsenseCode : (type === "BANNER" ? null : undefined),
-        imageUrl: type === "BANNER" ? imageUrl : (type === "ADSENSE" ? null : undefined),
-        targetUrl: type === "BANNER" ? targetUrl : (type === "ADSENSE" ? null : undefined),
-        position: position !== undefined ? position : undefined,
-        active: active !== undefined ? active : undefined,
-      },
-    });
-
-    return NextResponse.json(apiSuccess({ ad: updated }));
-  } catch (err) {
-    return handleApiError(err);
-  }
-}
-
-export async function DELETE(req) {
-  const auth = await checkSitePermission(req, "EDITOR");
-  if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) throw new ValidationError("Advertisement ID is required");
-
-    const existing = await prisma.advertisement.findFirst({
-      where: { id, siteId: auth.siteId, deletedAt: null },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "Advertisement not found" }, { status: 404 });
-    }
-
-    // Soft delete
-    await prisma.advertisement.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-
-    return NextResponse.json(apiSuccess({ success: true }));
-  } catch (err) {
-    return handleApiError(err);
+    return NextResponse.json({ error: 'Failed to create ad' }, { status: 500 });
   }
 }

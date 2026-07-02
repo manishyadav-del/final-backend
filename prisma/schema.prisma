@@ -67,7 +67,7 @@ model Site {
   pushNotifications    PushNotification[]
   cookieConsentLogs    CookieConsentLog[]
   comments             Comment[]
-  advertisements       Advertisement[]
+  adZones              AdZone[]
 
   @@index([isActive])
 }
@@ -905,24 +905,53 @@ model Comment {
   @@index([siteId])
 }
 
-// ========== ADVERTISEMENTS ==========
-model Advertisement {
-  id          String    @id @default(cuid())
-  siteId      String
-  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  name        String
-  type        String    // "BANNER" | "ADSENSE"
-  adsenseCode String?   @db.Text
-  imageUrl    String?
-  targetUrl   String?
-  position    String    // "HEADER" | "SIDEBAR" | "FOOTER" | "IN_CONTENT"
-  active      Boolean   @default(true)
-  impressions Int       @default(0)
-  clicks      Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+// ========== ADVERTISEMENT MANAGEMENT ==========
+model AdZone {
+  id        String   @id @default(cuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name      String
+  slug      String   @db.VarChar(50)
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ads       Ad[]
 
+  @@unique([siteId, slug])
   @@index([siteId])
 }
 
+model Ad {
+  id          String       @id @default(cuid())
+  zoneId      String
+  zone        AdZone       @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  name        String
+  type        String       // "banner" or "adsense"
+  code        String?      @db.Text
+  imageUrl    String?
+  targetUrl   String?
+  isActive    Boolean      @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  impressions Int          @default(0)
+  clicks      Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  analytics   AdAnalytic[]
+
+  @@index([zoneId])
+}
+
+model AdAnalytic {
+  id        String   @id @default(cuid())
+  adId      String
+  ad        Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+  type      String   // "impression" or "click"
+  visitorId String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([adId])
+}

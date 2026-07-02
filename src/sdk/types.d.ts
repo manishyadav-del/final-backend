@@ -59,6 +59,15 @@ export class CMSClient {
     email: string;
     phone?: string;
     message: string;
+    recaptchaToken?: string;
+  }): Promise<any>;
+
+  // --- Marketing CRM & Newsletters ---
+  subscribeToNewsletter(data: {
+    email: string;
+    name?: string | null;
+    metadata?: any | null;
+    listIds?: string[];
   }): Promise<any>;
 
   // --- Newsletter & CRM Subscribers ---
@@ -87,6 +96,10 @@ export class CMSClient {
     accepted: boolean;
   }): Promise<any>;
   getComplianceConfig(): Promise<any>;
+
+  // --- Ad Management ---
+  getAds(zoneSlug: string): Promise<any>;
+  trackAdEvent(adId: string, type: "impression" | "click"): Promise<any>;
 
   // --- SEO Metadata ---
   getSeoMetadata(pageSlug: string): Promise<any>;

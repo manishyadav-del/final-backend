@@ -144,6 +144,12 @@ const sections = [
         icon: BarChart2,
         minRole: "VIEWER",
       },
+      {
+        href: "/ads",
+        label: "Ads Manager",
+        icon: Megaphone,
+        minRole: "EDITOR",
+      },
     ],
   },
 

@@ -42,6 +42,51 @@ export class EmailService extends BaseService {
       };
     }
 
+    // SendGrid provider
+    if (provider === "sendgrid") {
+      const apiKey = emailConfig.sendgridApiKey;
+      if (!apiKey) {
+        throw new Error(`SendGrid API key is not configured for site: ${siteId}`);
+      }
+      return {
+        transporter: {
+          sendMail: async ({ from, to, subject, text, html }) => {
+            const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                personalizations: [
+                  {
+                    to: [{ email: to }],
+                  },
+                ],
+                from: {
+                  email: from || emailConfig.formEmail || "noreply@yourdomain.com",
+                },
+                subject,
+                content: [
+                  ...(text ? [{ type: "text/plain", value: text }] : []),
+                  ...(html ? [{ type: "text/html", value: html }] : []),
+                ],
+              }),
+            });
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              const errMsg = errData.errors
+                ? errData.errors.map((e) => e.message).join(", ")
+                : `SendGrid returned status ${response.status}`;
+              throw new Error(errMsg);
+            }
+          },
+        },
+        fromEmail: emailConfig.formEmail || "",
+        config: emailConfig,
+      };
+    }
+
     // SMTP provider (default)
     const { host, port, username, password } = emailConfig;
 
@@ -175,6 +220,21 @@ export class EmailService extends BaseService {
       const { data, error } = await resend.apiKeys.list();
       if (error) throw new Error(`Resend connection failed: ${error.message}`);
       return { success: true, message: "Resend API key is valid." };
+    }
+
+    if (provider === "sendgrid") {
+      const apiKey = emailConfig.sendgridApiKey;
+      if (!apiKey) throw new Error("SendGrid API key is not configured.");
+      const response = await fetch("https://api.sendgrid.com/v3/scopes", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`SendGrid connection failed with status: ${response.status}`);
+      }
+      return { success: true, message: "SendGrid API key is valid." };
     }
 
     const { host, port, username, password } = emailConfig;

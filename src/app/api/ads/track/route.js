@@ -1,39 +1,41 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { getSiteId } from "@/lib/siteGuard";
-import { handleApiError, apiSuccess, ValidationError } from "@/core/errors";
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { apiSuccess } from '@/core/errors';
 
 export async function POST(req) {
   try {
-    const siteId = getSiteId(req);
-    const body = await req.json().catch(() => ({}));
-    const { adId, action } = body;
-
-    if (!adId) {
-      throw new ValidationError("adId is required");
+    const { adId, type } = await req.json();
+    if (!adId || !['impression', 'click'].includes(type)) {
+      return NextResponse.json({ error: 'Invalid adId or tracking type' }, { status: 400 });
     }
-    if (action !== "impression" && action !== "click") {
-      throw new ValidationError("action must be either 'impression' or 'click'");
-    }
-
-    const ad = await prisma.advertisement.findFirst({
-      where: { id: adId, siteId, deletedAt: null },
+    const ad = await prisma.ad.findUnique({
+      where: { id: adId }
     });
-
     if (!ad) {
-      return NextResponse.json({ error: "Advertisement not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
     }
-
-    const updated = await prisma.advertisement.update({
-      where: { id: adId },
-      data: {
-        impressions: action === "impression" ? { increment: 1 } : undefined,
-        clicks: action === "click" ? { increment: 1 } : undefined,
-      },
-    });
-
-    return NextResponse.json(apiSuccess({ success: true, ad: updated }));
+    const ipAddress = req.headers.get('x-forwarded-for') || req.ip || null;
+    const userAgent = req.headers.get('user-agent') || null;
+    await prisma.$transaction([
+      prisma.ad.update({
+        where: { id: adId },
+        data: {
+          impressions: type === 'impression' ? { increment: 1 } : undefined,
+          clicks: type === 'click' ? { increment: 1 } : undefined,
+        }
+      }),
+      prisma.adAnalytic.create({
+        data: {
+          adId,
+          type,
+          ipAddress,
+          userAgent,
+        }
+      })
+    ]);
+    return NextResponse.json(apiSuccess({ success: true }));
   } catch (err) {
-    return handleApiError(err);
+    console.error('Ad tracking error:', err);
+    return NextResponse.json({ error: 'Internal Server Error', message: err.message }, { status: 500 });
   }
 }

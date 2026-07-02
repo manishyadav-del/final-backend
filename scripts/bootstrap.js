@@ -1,12 +1,10 @@
 require("dotenv/config");
 const { PrismaClient } = require("@prisma/client");
-const { PrismaPg } = require("@prisma/adapter-pg");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function bootstrap() {
   const args = process.argv.slice(2).reduce((acc, arg) => {

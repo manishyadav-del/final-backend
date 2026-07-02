@@ -43,32 +43,49 @@ export async function POST(req) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Check if already subscribed
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if already subscribed in legacy table
     const existing = await prisma.newsletter.findFirst({
-      where: { siteId: auth.siteId, email: email.trim().toLowerCase() },
+      where: { siteId: auth.siteId, email: cleanEmail },
     });
+
+    let legacySubscriber;
 
     if (existing) {
       // If unsubscribed, re-activate
       if (existing.status !== "active") {
-        const updated = await prisma.newsletter.update({
+        legacySubscriber = await prisma.newsletter.update({
           where: { id: existing.id },
           data: { status: "active" },
         });
-        return NextResponse.json(apiSuccess({ subscriber: updated }), { status: 200 });
+      } else {
+        return NextResponse.json({ error: "Email already subscribed" }, { status: 409 });
       }
-      return NextResponse.json({ error: "Email already subscribed" }, { status: 409 });
+    } else {
+      legacySubscriber = await prisma.newsletter.create({
+        data: {
+          siteId: auth.siteId,
+          email: cleanEmail,
+          status: "active",
+        },
+      });
     }
 
-    const subscriber = await prisma.newsletter.create({
-      data: {
-        siteId: auth.siteId,
-        email: email.trim().toLowerCase(),
+    // Sync to CRM subscriber list
+    try {
+      const { subscriberService } = await import("@/services/subscriber.service");
+      await subscriberService.createSubscriber(auth.siteId, {
+        email: cleanEmail,
         status: "active",
-      },
-    });
+        tags: "admin-created",
+        metadata: { source: "admin-dashboard" }
+      });
+    } catch (e) {
+      console.error("Failed to sync admin-created subscriber to CRM:", e);
+    }
 
-    return NextResponse.json(apiSuccess({ subscriber }), { status: 201 });
+    return NextResponse.json(apiSuccess({ subscriber: legacySubscriber }), { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: "Internal Server Error", message: err.message }, { status: 500 });
   }

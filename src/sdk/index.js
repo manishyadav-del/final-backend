@@ -165,13 +165,24 @@ export class CMSClient {
   }
 
   // --- Forms & Leads ---
-  async submitContactForm({ name, email, phone, message }) {
+  async submitContactForm({ name, email, phone, message, recaptchaToken }) {
     return this._request("/api/forms/submit", "POST", {
       siteId: this.siteId,
       name,
       email,
       phone,
       message,
+      recaptchaToken,
+    });
+  }
+
+  // --- Marketing CRM & Newsletters ---
+  async subscribeToNewsletter({ email, name = null, metadata = null, listIds = [] }) {
+    return this._request("/api/newsletter/subscribe", "POST", {
+      email,
+      name,
+      metadata,
+      listIds,
     });
   }
 
@@ -226,6 +237,15 @@ export class CMSClient {
 
   async getComplianceConfig() {
     return this._request("/api/compliance/config");
+  }
+
+  // --- Ad Management ---
+  async getAds(zoneSlug) {
+    return this._request(`/api/ads/serve?zone=${encodeURIComponent(zoneSlug)}`);
+  }
+
+  async trackAdEvent(adId, type) {
+    return this._request("/api/ads/track", "POST", { adId, type });
   }
 
   // --- SEO Metadata ---
