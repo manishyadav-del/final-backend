@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import nodemailer from "nodemailer";
+import { emailService } from "./email.service";
 
 export const campaignService = {
   async getTemplates(siteId) {
@@ -80,28 +80,10 @@ export const campaignService = {
     });
     if (!campaign) throw new Error("Campaign not found");
 
-    const settings = await prisma.globalSettings.findUnique({
-      where: { siteId },
-      select: { emailSettings: true }
-    });
-
-    const emailSettings = settings?.emailSettings || {};
-    if (!emailSettings.smtpHost || !emailSettings.smtpUser) {
-      throw new Error("SMTP settings not configured on this site");
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: emailSettings.smtpHost,
-      port: Number(emailSettings.smtpPort || 587),
-      secure: Number(emailSettings.smtpPort) === 465,
-      auth: {
-        user: emailSettings.smtpUser,
-        pass: emailSettings.smtpPass,
-      }
-    });
+    const { transporter, fromEmail } = await emailService.getTransporterForSite(siteId);
 
     await transporter.sendMail({
-      from: `"Global Backend" <${emailSettings.formEmail || emailSettings.smtpUser}>`,
+      from: `"Global Backend" <${fromEmail}>`,
       to: targetEmail,
       subject: `[TEST] ${campaign.subject}`,
       html: campaign.body
@@ -128,25 +110,7 @@ export const campaignService = {
     if (!campaign) throw new Error("Campaign not found");
     if (!campaign.list) throw new Error("Campaign list not selected or empty");
 
-    const settings = await prisma.globalSettings.findUnique({
-      where: { siteId },
-      select: { emailSettings: true }
-    });
-
-    const emailSettings = settings?.emailSettings || {};
-    if (!emailSettings.smtpHost || !emailSettings.smtpUser) {
-      throw new Error("SMTP credentials missing");
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: emailSettings.smtpHost,
-      port: Number(emailSettings.smtpPort || 587),
-      secure: Number(emailSettings.smtpPort) === 465,
-      auth: {
-        user: emailSettings.smtpUser,
-        pass: emailSettings.smtpPass,
-      }
-    });
+    const { transporter, fromEmail } = await emailService.getTransporterForSite(siteId);
 
     await prisma.emailCampaign.update({
       where: { id: campaignId },
@@ -163,7 +127,7 @@ export const campaignService = {
 
       try {
         await transporter.sendMail({
-          from: `"Global Backend" <${emailSettings.formEmail || emailSettings.smtpUser}>`,
+          from: `"Global Backend" <${fromEmail}>`,
           to: sub.email,
           subject: campaign.subject,
           html: campaign.body
