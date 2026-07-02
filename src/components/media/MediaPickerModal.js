@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Upload, Folder, Home, ArrowLeft, Search, Image as ImageIcon, FileIcon, CheckCircle } from "lucide-react";
 
+function getThumbnailUrl(url) {
+  if (!url || !url.includes("res.cloudinary.com")) return url;
+  return url.replace("/upload/", "/upload/c_fill,w_200,h_200,g_auto,q_auto,f_auto/");
+}
+
 /**
  * MediaPickerModal
  * 
@@ -61,6 +66,7 @@ export default function MediaPickerModal({ onSelect, onClose, title = "Select fr
   }, [currentFolderId, filter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadContents();
   }, [loadContents]);
 
@@ -278,7 +284,7 @@ export default function MediaPickerModal({ onSelect, onClose, title = "Select fr
                         >
                           {isImage ? (
                             <img
-                              src={m.secureUrl || m.url}
+                              src={getThumbnailUrl(m.secureUrl || m.url)}
                               alt={m.altText || m.fileName}
                               className="w-full h-full object-cover"
                             />

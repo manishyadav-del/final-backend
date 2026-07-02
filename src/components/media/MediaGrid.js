@@ -1,5 +1,10 @@
 "use client";
 
+function getThumbnailUrl(url) {
+  if (!url || !url.includes("res.cloudinary.com")) return url;
+  return url.replace("/upload/", "/upload/c_fill,w_300,h_300,g_auto,q_auto,f_auto/");
+}
+
 export default function MediaGrid({ media, onDelete, onCopyUrl, onSelectMedia }) {
   if (!media.length) {
     return (
@@ -25,7 +30,7 @@ export default function MediaGrid({ media, onDelete, onCopyUrl, onSelectMedia })
             >
               {isImage ? (
                 <img
-                  src={item.url}
+                  src={getThumbnailUrl(item.url)}
                   alt={item.altText || item.fileName}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
