@@ -271,7 +271,7 @@ function BlogPostDetail({ post, site, settings }) {
 }
 
 // 1. Fetch Page and its Data Helper
-async function getPageData(slugSegments) {
+async function getPageData(slugSegments, preview = false) {
   const rawSlug = (slugSegments || []).join("/");
   const slugWithSlash = "/" + rawSlug;
   const slugWithoutSlash = rawSlug;
@@ -316,8 +316,8 @@ async function getPageData(slugSegments) {
     where: {
       siteId: site.id,
       slug: { in: [slugWithSlash, slugWithoutSlash] },
-      status: "PUBLISHED",
       deletedAt: null,
+      ...(preview ? {} : { status: "PUBLISHED" }),
     },
     include: {
       sections: {
@@ -1123,9 +1123,11 @@ function PublicHeader({ site, settings }) {
 }
 
 // 4. Main Server Catch-All Page Component
-export default async function CatchAllPage({ params }) {
+export default async function CatchAllPage({ params, searchParams }) {
   const p = await params;
-  const data = await getPageData(p.slug);
+  const sp = await searchParams;
+  const preview = sp?.preview === "true";
+  const data = await getPageData(p.slug, preview);
 
   if (!data) {
     return notFound();
