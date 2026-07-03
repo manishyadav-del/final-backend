@@ -73,36 +73,42 @@ const findPages = (dir, baseRelative, routesList = []) => {
       const routeFolder = path.relative(baseRelative, dir).replace(/\\/g, "/");
 
       // Remove Next.js group route parentheses, e.g. (dashboard), (auth)
-      let slug =
-        "/" +
-        routeFolder
-          .split("/")
-          .filter(
-            (segment) =>
-              segment && !segment.startsWith("(") && !segment.endsWith(")"),
-          )
-          .join("/");
+      const segments = routeFolder
+        .split("/")
+        .filter(
+          (segment) =>
+            segment && !segment.startsWith("(") && !segment.endsWith(")"),
+        );
+
+      let slug = "/" + segments.join("/");
 
       // Sanitize root slug double slash
       if (slug === "//" || slug === "") slug = "/";
 
-      // Detect if dynamic route
-      const isDynamic = slug.includes("[") && slug.includes("]");
-      // Skip dynamic routes (e.g. [...slug], [slug]) - they're catch-all patterns
+      // Skip any segment that is a dynamic bracket e.g. [slug], [...slug]
+      const isDynamic = segments.some(
+        (seg) => seg.startsWith("[") && seg.endsWith("]"),
+      );
       if (isDynamic) return;
 
+      // Skip Next.js private folders (_components, _utils) and api routes
+      const hasPrivateOrApi = segments.some(
+        (seg) => seg.startsWith("_") || seg === "api",
+      );
+      if (hasPrivateOrApi) return;
+
       // Resolve human-readable title
-      let title = slug === "/" ? "Home" : slug.split("/").pop();
+      let title = slug === "/" ? "Home" : segments[segments.length - 1] || slug;
       // Capitalize first letter
       if (title) {
-        title = title.replace(/[\[\]\.\+]/g, ""); // strip brackets
+        title = title.replace(/[\[\]\.\+\-]/g, " ").trim();
         title = title.charAt(0).toUpperCase() + title.slice(1);
       }
 
       routesList.push({
         slug,
         path: relativeFilePath,
-        type: isDynamic ? "dynamic" : "static",
+        type: "static",
         title: title || "New Page",
       });
     }

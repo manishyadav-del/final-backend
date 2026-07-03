@@ -303,6 +303,56 @@ Once connected, these features are available directly from the backend dashboard
 
 ---
 
+## Dynamic Pages & Catch-all Routing
+
+To allow the frontend site to dynamically resolve and render pages created in the CMS (e.g., `/about`, `/services`, `/pricing`), implement a catch-all route handler in your Next.js project.
+
+### 1. Create a Catch-all Route
+Create a new file in your Next.js project at `src/app/[...slug]/page.js`:
+
+```js
+import { notFound } from "next/navigation";
+import { createCMS } from "@yourcompany/global-backend-next";
+import { RichTextRenderer } from "@yourcompany/global-backend-next/components";
+
+const cms = createCMS({
+  endpoint: process.env.NEXT_PUBLIC_CMS_BASE_URL,
+  siteId: process.env.NEXT_PUBLIC_SITE_ID,
+});
+
+export default async function CatchAllPage({ params }) {
+  const p = await params;
+  const slug = (p.slug || []).join("/");
+
+  let pageData = null;
+  try {
+    pageData = await cms.getPage(slug);
+  } catch (err) {
+    console.error("Failed to load page:", err);
+  }
+
+  if (!pageData) {
+    return notFound();
+  }
+
+  return (
+    <main className="max-w-4xl mx-auto py-12 px-6">
+      <h1 className="text-3xl font-bold">{pageData.title}</h1>
+      <div className="mt-8 space-y-6">
+        {(pageData.sections || []).map((section) => (
+          <section key={section.id} className="border p-6 rounded-lg bg-white">
+            <h2 className="text-xl font-semibold mb-4">{section.name}</h2>
+            <RichTextRenderer content={section.content?.contentJson || section.content} />
+          </section>
+        ))}
+      </div>
+    </main>
+  );
+}
+```
+
+---
+
 ## Troubleshooting
 
 ### "Site not found" error on frontend startup

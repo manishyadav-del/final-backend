@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Script from "next/script";
 import DOMPurify from "isomorphic-dompurify";
 import { usePathname } from "next/navigation";
@@ -30,6 +30,205 @@ function getConsentState(complianceSettings) {
   } catch {
     return { analytics: false, marketing: false };
   }
+}
+
+/**
+ * CtaPopups Component
+ * Renders database-driven CTA popup modals on the public frontend.
+ * Supports trigger types:
+ *   - "page-load"   → shows after triggerValue seconds delay
+ *   - "scroll"      → shows when user scrolls past triggerValue % of page height
+ *   - "exit-intent" → shows when cursor leaves the viewport from the top
+ * showOnce flag prevents re-showing via localStorage.
+ */
+export function CtaPopups({ ctaConfig }) {
+  const popups = ctaConfig?.popups || [];
+  const [visiblePopupId, setVisiblePopupId] = useState(null);
+  const shownRef = useRef(new Set());
+
+  const showPopup = useCallback(
+    (id) => {
+      if (shownRef.current.has(id)) return;
+      const popup = popups.find((p) => p.id === id);
+      if (!popup) return;
+      if (popup.showOnce) {
+        try {
+          const key = `cta_popup_shown_${id}`;
+          if (localStorage.getItem(key)) return;
+          localStorage.setItem(key, "1");
+        } catch {}
+      }
+      shownRef.current.add(id);
+      setVisiblePopupId(id);
+    },
+    [popups]
+  );
+
+  useEffect(() => {
+    if (!popups.length) return;
+    const cleanups = [];
+    popups.forEach((popup) => {
+      if (!popup.id) return;
+      if (popup.triggerOn === "page-load") {
+        const delaySec = parseFloat(popup.triggerValue) || 0;
+        const t = setTimeout(() => showPopup(popup.id), delaySec * 1000);
+        cleanups.push(() => clearTimeout(t));
+      } else if (popup.triggerOn === "scroll") {
+        const pct = parseFloat(popup.triggerValue) || 50;
+        const onScroll = () => {
+          const scrollHeight = document.body.scrollHeight - window.innerHeight;
+          if (scrollHeight <= 0) return;
+          const scrolled = (window.scrollY / scrollHeight) * 100;
+          if (scrolled >= pct) showPopup(popup.id);
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        cleanups.push(() => window.removeEventListener("scroll", onScroll));
+      } else if (popup.triggerOn === "exit-intent") {
+        const onMouse = (e) => {
+          if (e.clientY <= 10) showPopup(popup.id);
+        };
+        document.addEventListener("mouseleave", onMouse);
+        cleanups.push(() => document.removeEventListener("mouseleave", onMouse));
+      }
+    });
+    return () => cleanups.forEach((fn) => fn());
+  }, [popups, showPopup]);
+
+  const activePopup = popups.find((p) => p.id === visiblePopupId);
+  if (!activePopup) return null;
+
+  const typeMeta = {
+    information: { accentColor: "#3b82f6", icon: "\u2139\ufe0f" },
+    warning:     { accentColor: "#f59e0b", icon: "\u26a0\ufe0f" },
+    promotional: { accentColor: "#8b5cf6", icon: "\uD83C\uDF81" },
+    newsletter:  { accentColor: "#10b981", icon: "\uD83D\uDCEC" },
+    urgent:      { accentColor: "#ef4444", icon: "\uD83D\uDEA8" },
+  };
+  const meta = typeMeta[activePopup.type] || typeMeta.information;
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes sdk-popup-fadein  { from { opacity:0 } to { opacity:1 } }
+        @keyframes sdk-popup-slidein { from { opacity:0; transform:translateY(20px) scale(0.97) } to { opacity:1; transform:translateY(0) scale(1) } }
+      ` }} />
+      <div
+        onClick={() => setVisiblePopupId(null)}
+        style={{
+          position:"fixed", inset:0, zIndex:9999,
+          backgroundColor:"rgba(0,0,0,0.55)", backdropFilter:"blur(2px)",
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem",
+          animation:"sdk-popup-fadein 0.25s ease",
+        }}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor:"#ffffff", borderRadius:"1rem",
+            boxShadow:"0 20px 50px rgba(0,0,0,0.3)",
+            maxWidth:"480px", width:"100%", overflow:"hidden", position:"relative",
+            animation:"sdk-popup-slidein 0.25s ease",
+          }}
+        >
+          <div style={{ height:"4px", backgroundColor:meta.accentColor }} />
+          <button
+            onClick={() => setVisiblePopupId(null)}
+            aria-label="Close popup"
+            style={{
+              position:"absolute", top:"0.75rem", right:"0.75rem",
+              background:"rgba(0,0,0,0.07)", border:"none", borderRadius:"50%",
+              width:"28px", height:"28px", cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:"1rem", color:"#374151", lineHeight:1, zIndex:10,
+            }}
+          >&#x00D7;</button>
+          <div style={{ padding:"1.75rem 1.75rem 1.5rem" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.625rem", marginBottom:"0.75rem" }}>
+              <span style={{ fontSize:"1.4rem" }}>{meta.icon}</span>
+              <h2 style={{ margin:0, fontSize:"1.1rem", fontWeight:700, color:"#111827", lineHeight:1.3 }}>
+                {activePopup.title}
+              </h2>
+            </div>
+            {activePopup.body && (
+              <p style={{ margin:"0 0 1.25rem", fontSize:"0.9rem", color:"#4b5563", lineHeight:1.6 }}>
+                {activePopup.body}
+              </p>
+            )}
+            {activePopup.buttonText && activePopup.buttonLink && (
+              <a
+                href={activePopup.buttonLink}
+                onClick={() => setVisiblePopupId(null)}
+                style={{
+                  display:"inline-block", backgroundColor:meta.accentColor,
+                  color:"#ffffff", padding:"0.625rem 1.25rem",
+                  borderRadius:"0.5rem", fontSize:"0.875rem", fontWeight:600,
+                  textDecoration:"none", transition:"opacity 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.88")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                {activePopup.buttonText}
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/**
+ * CtaFloatingButtons Component
+ * Renders database-driven floating action buttons at fixed screen positions.
+ * Reads ctaConfig.floatingButtons[] and skips any with enabled === false.
+ */
+export function CtaFloatingButtons({ ctaConfig }) {
+  const buttons = (ctaConfig?.floatingButtons || []).filter((b) => b.enabled !== false);
+  if (!buttons.length) return null;
+
+  const positionMap = {
+    "bottom-right": { bottom:"1.5rem", right:"1.5rem" },
+    "bottom-left":  { bottom:"1.5rem", left:"1.5rem"  },
+    "top-right":    { top:"1.5rem",    right:"1.5rem" },
+    "top-left":     { top:"1.5rem",    left:"1.5rem"  },
+  };
+
+  return (
+    <>
+      {buttons.map((btn) => {
+        const pos = positionMap[btn.position] || positionMap["bottom-right"];
+        return (
+          <a
+            key={btn.id}
+            href={btn.link || "#"}
+            aria-label={btn.label}
+            title={btn.label}
+            style={{
+              position:"fixed", ...pos, zIndex:9000,
+              display:"flex", alignItems:"center", gap:"0.5rem",
+              backgroundColor:btn.color || "#1e293b", color:"#ffffff",
+              padding:"0.625rem 1rem", borderRadius:"2rem",
+              boxShadow:"0 4px 14px rgba(0,0,0,0.25)",
+              textDecoration:"none", fontSize:"0.85rem", fontWeight:600,
+              transition:"transform 0.2s ease, box-shadow 0.2s ease",
+              whiteSpace:"nowrap",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,0.25)";
+            }}
+          >
+            {btn.icon && <span style={{ fontSize:"1rem" }}>{btn.icon}</span>}
+            {btn.label}
+          </a>
+        );
+      })}
+    </>
+  );
 }
 
 export function GlobalAnalytics({ settings }) {
