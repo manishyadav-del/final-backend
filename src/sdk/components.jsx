@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Script from "next/script";
-import DOMPurify from "isomorphic-dompurify";
 import { usePathname } from "next/navigation";
 /**
  * GlobalAnalytics Component
@@ -2173,15 +2172,20 @@ export function Footer({
  * and renders it beautifully using standard typography classes.
  */
 export function RichTextRenderer({ content, className = "" }) {
+  const [cleanHtml, setCleanHtml] = useState(typeof content === "string" ? content : "");
+
+  useEffect(() => {
+    if (content) {
+      const htmlString = typeof content === "string" ? content : String(content);
+      import("dompurify").then((module) => {
+        const DOMPurify = module.default || module;
+        setCleanHtml(DOMPurify.sanitize(htmlString));
+      });
+    }
+  }, [content]);
+
   if (!content) return null;
 
-  // 1. Ensure the content is a string
-  const htmlString = typeof content === "string" ? content : String(content);
-
-  // 2. Clean the HTML to ensure it's 100% secure
-  const cleanHtml = DOMPurify.sanitize(htmlString);
-
-  // 3. Render it
   return (
     <div
       className={`prose prose-slate prose-lg max-w-none space-y-4 ${className}`}
