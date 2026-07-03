@@ -137,11 +137,34 @@ export async function POST(req) {
     const updated = [];
     const syncedRoutes = [];
 
-    for (const r of parsed.routes) {
-      const slug = r.slug.startsWith("/") ? r.slug : `/${r.slug}`;
+    // Filter out system, administrative, and auth routes
+    const systemRoutePatterns = [
+      /^\/admin(\/|$)/i,
+      /^\/crm(\/|$)/i,
+      /^\/login(\/|$)/i,
+      /^\/forgot-password(\/|$)/i,
+      /^\/reset-password(\/|$)/i,
+      /^\/preview(\/|$)/i,
+      /^\/maintenance(\/|$)/i,
+    ];
 
-      const existing = await prisma.page.findUnique({
-        where: { siteId_slug: { siteId: parsed.siteId, slug } },
+    const filteredRoutes = parsed.routes.filter((r) => {
+      const slug = r.slug.startsWith("/") ? r.slug : `/${r.slug}`;
+      return !systemRoutePatterns.some((pattern) => pattern.test(slug));
+    });
+
+    for (const r of filteredRoutes) {
+      const slug = r.slug.startsWith("/") ? r.slug : `/${r.slug}`;
+      // Also check without leading slash, e.g. "about" for pages stored as "about"
+      const slugBare = slug.replace(/^\//, "");
+
+      // Look up by either slug variant to avoid duplicates
+      const existing = await prisma.page.findFirst({
+        where: {
+          siteId: parsed.siteId,
+          slug: { in: [slug, slugBare] },
+          deletedAt: null,
+        },
       });
 
       let pageId = existing?.id ?? null;
@@ -162,12 +185,15 @@ export async function POST(req) {
         pageId = newPage.id;
         created.push({ slug, pageId: newPage.id });
       } else {
+        // Always stamp as hardcoded + normalize slug to leading-slash form
         await prisma.page.update({
           where: { id: existing.id },
           data: {
             title: r.title ?? existing.title,
+            slug,                  // normalize to /about form
             isDiscovered: true,
-            isHardcoded: true,
+            isHardcoded: true,     // upgrade any manually-created page to hardcoded
+            isManagedBySync: true,
             status: "PUBLISHED",
             sourceRoute: existing.sourceRoute || slug,
           },
@@ -205,7 +231,7 @@ export async function POST(req) {
 
     // ── Cleanup: delete synced pages that no longer exist in the frontend ──
     const incomingSlugs = new Set(
-      parsed.routes.map((r) =>
+      filteredRoutes.map((r) =>
         r.slug.startsWith("/") ? r.slug : `/${r.slug}`,
       ),
     );
@@ -217,7 +243,7 @@ export async function POST(req) {
     const deleted = [];
     for (const sr of existingSyncedRoutes) {
       if (!incomingSlugs.has(sr.route) && sr.pageId) {
-        await prisma.page.update({
+        await prisma.page.updateMany({
           where: { id: sr.pageId },
           data: { deletedAt: new Date() },
         });

@@ -56,6 +56,19 @@ function findPages(dir, baseAbsolute, routesList = []) {
     const stat = fs.statSync(fullPath);
 
     if (stat.isDirectory()) {
+      const folderName = file.toLowerCase();
+      // Skip scanning admin, auth, and system directories
+      if (
+        folderName === "admin" ||
+        folderName === "crm" ||
+        folderName === "login" ||
+        folderName === "forgot-password" ||
+        folderName === "reset-password" ||
+        folderName === "preview" ||
+        folderName === "maintenance"
+      ) {
+        return;
+      }
       findPages(fullPath, baseAbsolute, routesList);
     } else if (
       file.toLowerCase().startsWith("page.") &&
@@ -82,6 +95,20 @@ function findPages(dir, baseAbsolute, routesList = []) {
 
       // Skip dynamic routes ([slug], [...params])
       if (slug.includes("[") && slug.includes("]")) return;
+
+      // Skip administrative / system routes
+      const lowerSlug = slug.toLowerCase();
+      if (
+        lowerSlug === "/login" ||
+        lowerSlug === "/forgot-password" ||
+        lowerSlug === "/reset-password" ||
+        lowerSlug === "/maintenance" ||
+        lowerSlug.startsWith("/admin") ||
+        lowerSlug.startsWith("/crm") ||
+        lowerSlug.startsWith("/preview")
+      ) {
+        return;
+      }
 
       let title = slug === "/" ? "Home" : slug.split("/").pop();
       if (title) {
