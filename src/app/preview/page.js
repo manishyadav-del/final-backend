@@ -647,10 +647,12 @@ export default async function PreviewPage({ searchParams }) {
     );
   }
 
-  // Fetch page directly with Prisma
+import { redirect } from "next/navigation";
+
+// Fetch page directly with Prisma
   const page = await prisma.page.findUnique({
     where: { id: pageId },
-    select: { id: true, title: true, slug: true, status: true, siteId: true },
+    select: { id: true, title: true, slug: true, status: true, siteId: true, isHardcoded: true },
   });
 
   if (!page || String(page.siteId) !== String(siteId)) {
@@ -662,6 +664,10 @@ export default async function PreviewPage({ searchParams }) {
         </pre>
       </div>
     );
+  }
+
+  if (page.isHardcoded) {
+    redirect(`${page.slug || "/"}`);
   }
 
   // Fetch Site and settings
