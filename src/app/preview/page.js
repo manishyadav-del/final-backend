@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import ContactFormSection from "@/components/ContactFormSection";
+import { redirect } from "next/navigation";
 
 function SafeImage({ src, alt, ...props }) {
   if (!src) return null;
@@ -646,8 +647,6 @@ export default async function PreviewPage({ searchParams }) {
       </div>
     );
   }
-
-import { redirect } from "next/navigation";
 
 // Fetch page directly with Prisma
   const page = await prisma.page.findUnique({
