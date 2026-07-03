@@ -4,7 +4,7 @@ export class AnalyticsService {
   // ─── Ping / Session Recording ────────────────────────────────────────────────
 
   async recordPing(siteId, pingData) {
-    const { visitorId, pageViewed, location, deviceInfo, trafficSource, duration } = pingData;
+    const { visitorId, pageViewed, ipAddress, location, deviceInfo, trafficSource, duration } = pingData;
     const page = pageViewed.startsWith("/") ? pageViewed : `/${pageViewed}`;
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
 
@@ -25,7 +25,10 @@ export class AnalyticsService {
 
       const updated = await prisma.visitorLog.update({
         where: { id: existingLog.id },
-        data: { duration: finalDuration },
+        data: { 
+          duration: finalDuration,
+          ipAddress: ipAddress || existingLog.ipAddress, // Update IP address if new one is captured
+        },
       });
       return { logId: updated.id, updated: true };
     }
@@ -35,6 +38,7 @@ export class AnalyticsService {
         siteId,
         visitorId,
         pageViewed: page,
+        ipAddress,
         location: location || "Unknown",
         deviceInfo: deviceInfo || "Unknown",
         trafficSource: trafficSource || "Direct",

@@ -187,6 +187,7 @@ function LogsTable({ logs }) {
     (l) =>
       l.pageViewed?.toLowerCase().includes(search.toLowerCase()) ||
       l.visitorId?.toLowerCase().includes(search.toLowerCase()) ||
+      (l.ipAddress || "").toLowerCase().includes(search.toLowerCase()) ||
       (l.location || "").toLowerCase().includes(search.toLowerCase()) ||
       (l.deviceInfo || "").toLowerCase().includes(search.toLowerCase()) ||
       (l.trafficSource || "").toLowerCase().includes(search.toLowerCase()),
@@ -201,7 +202,7 @@ function LogsTable({ logs }) {
         <Search size={14} className="text-gray-400" />
         <input
           className="flex-1 bg-transparent text-xs outline-none placeholder:text-gray-400"
-          placeholder="Filter by page, visitor ID, location, device…"
+          placeholder="Filter by page, visitor ID, IP, location, device…"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -216,6 +217,7 @@ function LogsTable({ logs }) {
           <thead>
             <tr className="border-b bg-gray-50 text-left text-gray-500 font-semibold uppercase tracking-wider">
               <th className="px-4 py-3">Visitor ID</th>
+              <th className="px-4 py-3">IP Address</th>
               <th className="px-4 py-3">Page</th>
               <th className="px-4 py-3">Location</th>
               <th className="px-4 py-3">Device</th>
@@ -228,7 +230,7 @@ function LogsTable({ logs }) {
             {slice.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-6 text-center text-gray-400 italic"
                 >
                   No visitor logs found.
@@ -242,6 +244,9 @@ function LogsTable({ logs }) {
                 >
                   <td className="px-4 py-2.5 font-mono text-gray-500 truncate max-w-[110px]">
                     {log.visitorId?.slice(0, 12)}…
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-gray-500">
+                    {log.ipAddress || "Unknown"}
                   </td>
                   <td className="px-4 py-2.5">
                     <span className="inline-flex items-center gap-1 font-medium text-indigo-700">

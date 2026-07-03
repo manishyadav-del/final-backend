@@ -625,6 +625,7 @@ model VisitorLog {
   site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   visitorId     String
   pageViewed    String
+  ipAddress     String?
   location      String?
   deviceInfo    String?
   trafficSource String?
